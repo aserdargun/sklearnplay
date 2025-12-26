@@ -10,26 +10,40 @@ This page covers:
 - And more...
 """
 
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+import streamlit as st
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
 st.set_page_config(page_title="Supervised Learning", page_icon="🎯", layout="wide")
 
-from skplay.core.datasets import DatasetRegistry, get_dataset, TaskType
-from skplay.core.preprocessing import PreprocessingBuilder, identify_column_types, encode_target
-from skplay.core.estimators import get_estimators_for_task, EstimatorRegistry, create_estimator
-from skplay.core.evaluation import evaluate_model, plot_confusion_matrix, plot_roc_curve, plot_residuals, plot_actual_vs_predicted, plot_learning_curve, run_cross_validation
+from skplay.core.datasets import DatasetRegistry, get_dataset
+from skplay.core.estimators import create_estimator
+from skplay.core.evaluation import (
+    evaluate_model,
+    plot_actual_vs_predicted,
+    plot_confusion_matrix,
+    plot_learning_curve,
+    plot_residuals,
+    plot_roc_curve,
+    run_cross_validation,
+)
+from skplay.core.preprocessing import PreprocessingBuilder, encode_target, identify_column_types
 from skplay.core.snippets import generate_code_snippet
-from skplay.ui.level import get_level, get_level_config, level_selector
 from skplay.ui.components import (
-    show_dataset_card, show_data_preview, show_metrics_table,
-    show_parameter_controls, show_code_snippet, create_download_button,
-    show_estimator_selector, show_split_controls, show_preprocessing_controls,
+    create_download_button,
+    show_code_snippet,
+    show_data_preview,
+    show_dataset_card,
+    show_estimator_selector,
+    show_metrics_table,
+    show_parameter_controls,
+    show_preprocessing_controls,
+    show_split_controls,
     show_training_button,
 )
+from skplay.ui.level import get_level, get_level_config, level_selector
 
 
 def main():
@@ -47,7 +61,7 @@ def main():
 
     # Level selector in sidebar
     with st.sidebar:
-        level = level_selector()
+        level_selector()
         st.markdown("---")
 
     # Main workflow tabs
@@ -157,7 +171,7 @@ def data_section():
         )
 
         if uploaded_file:
-            from skplay.core.upload import parse_csv, create_dataset_from_upload, get_column_summary
+            from skplay.core.upload import create_dataset_from_upload
 
             df = pd.read_csv(uploaded_file)
             st.dataframe(df.head(), use_container_width=True)
@@ -203,7 +217,9 @@ def preprocessing_section(data_result):
     with col2:
         st.markdown(f"**Categorical columns:** {len(categorical_cols)}")
         if categorical_cols:
-            st.caption(", ".join(categorical_cols[:5]) + ("..." if len(categorical_cols) > 5 else ""))
+            st.caption(
+                ", ".join(categorical_cols[:5]) + ("..." if len(categorical_cols) > 5 else "")
+            )
 
     # Show preprocessing controls
     config = show_preprocessing_controls(
@@ -223,7 +239,6 @@ def model_section(data_result, preproc_config):
     st.header("Select and Train Model")
 
     level = get_level()
-    config = get_level_config()
     task_type = data_result.card.task_type
 
     # Split controls
@@ -247,9 +262,7 @@ def model_section(data_result, preproc_config):
     # Training button
     if show_training_button(key="main_train"):
         with st.spinner("Training model..."):
-            result = train_model(
-                data_result, preproc_config, estimator_info, params, split_config
-            )
+            result = train_model(data_result, preproc_config, estimator_info, params, split_config)
             st.session_state.training_result = result
             st.success("Training complete!")
             return result
@@ -268,7 +281,8 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
 
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y_encoded,
+        X,
+        y_encoded,
         test_size=split_config["test_size"],
         random_state=split_config["random_state"],
     )
@@ -296,24 +310,26 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
     estimator = create_estimator(task_type, estimator_info.name, **params)
 
     # Build full pipeline
-    full_pipeline = Pipeline([
-        ("preprocessing", preprocessing_pipeline),
-        ("estimator", estimator),
-    ])
+    full_pipeline = Pipeline(
+        [
+            ("preprocessing", preprocessing_pipeline),
+            ("estimator", estimator),
+        ]
+    )
 
     # Fit
     full_pipeline.fit(X_train, y_train)
 
     # Evaluate
-    eval_result = evaluate_model(
-        full_pipeline, X_train, y_train, X_test, y_test, task_type
-    )
+    eval_result = evaluate_model(full_pipeline, X_train, y_train, X_test, y_test, task_type)
 
     # Cross-validation if requested
     cv_result = None
     if split_config.get("use_cv"):
         cv_result = run_cross_validation(
-            full_pipeline, X, y_encoded,
+            full_pipeline,
+            X,
+            y_encoded,
             cv=split_config.get("cv_folds", 5),
             task_type=task_type,
         )

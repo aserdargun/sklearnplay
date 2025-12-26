@@ -7,19 +7,18 @@ This page covers:
 - Individual Conditional Expectation (ICE)
 """
 
-import streamlit as st
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import streamlit as st
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 st.set_page_config(page_title="Model Inspection", page_icon="🔬", layout="wide")
 
 from skplay.core.datasets import get_dataset
-from skplay.core.evaluation import plot_feature_importance, plot_permutation_importance
 from skplay.ui.level import get_level, level_selector
 
 
@@ -27,7 +26,7 @@ def main():
     st.title("🔬 Model Inspection")
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     st.markdown("""
     Understand what your model learned and why it makes certain predictions.
@@ -74,7 +73,9 @@ def feature_importance_section():
         if task_type == "classification":
             dataset_name = st.selectbox("Dataset", ["iris", "breast_cancer", "wine"], key="fi_data")
         else:
-            dataset_name = st.selectbox("Dataset", ["diabetes", "california_housing"], key="fi_data_reg")
+            dataset_name = st.selectbox(
+                "Dataset", ["diabetes", "california_housing"], key="fi_data_reg"
+            )
 
         n_estimators = st.slider("Number of Trees", 10, 200, 100, key="fi_trees")
 
@@ -86,16 +87,19 @@ def feature_importance_section():
 
                 if task_type == "classification":
                     from sklearn.preprocessing import LabelEncoder
+
                     le = LabelEncoder()
                     y = le.fit_transform(y)
                     model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
                 else:
                     model = RandomForestRegressor(n_estimators=n_estimators, random_state=42)
 
-                pipeline = Pipeline([
-                    ("scaler", StandardScaler()),
-                    ("model", model),
-                ])
+                pipeline = Pipeline(
+                    [
+                        ("scaler", StandardScaler()),
+                        ("model", model),
+                    ]
+                )
 
                 pipeline.fit(X, y)
 
@@ -115,10 +119,12 @@ def feature_importance_section():
                 st.pyplot(fig)
 
                 # Table
-                importance_df = pd.DataFrame({
-                    "Feature": [feature_names[i] for i in sorted_idx],
-                    "Importance": importances[sorted_idx],
-                })
+                importance_df = pd.DataFrame(
+                    {
+                        "Feature": [feature_names[i] for i in sorted_idx],
+                        "Importance": importances[sorted_idx],
+                    }
+                )
                 st.dataframe(importance_df, hide_index=True)
 
     with st.expander("How It Works"):
@@ -169,6 +175,7 @@ def permutation_importance_section():
                 X, y = data.X, data.y
 
                 from sklearn.preprocessing import LabelEncoder
+
                 le = LabelEncoder()
                 y = le.fit_transform(y)
 
@@ -176,10 +183,12 @@ def permutation_importance_section():
                     X, y, test_size=0.3, random_state=42
                 )
 
-                model = Pipeline([
-                    ("scaler", StandardScaler()),
-                    ("model", RandomForestClassifier(n_estimators=100, random_state=42)),
-                ])
+                model = Pipeline(
+                    [
+                        ("scaler", StandardScaler()),
+                        ("model", RandomForestClassifier(n_estimators=100, random_state=42)),
+                    ]
+                )
 
                 model.fit(X_train, y_train)
 
@@ -194,18 +203,20 @@ def permutation_importance_section():
                 ax.boxplot(
                     result.importances[sorted_idx].T,
                     vert=False,
-                    labels=[feature_names[i] for i in sorted_idx]
+                    labels=[feature_names[i] for i in sorted_idx],
                 )
                 ax.set_xlabel("Decrease in Accuracy")
                 ax.set_title("Permutation Importance (on test set)")
                 st.pyplot(fig)
 
                 # Table
-                importance_df = pd.DataFrame({
-                    "Feature": [feature_names[i] for i in sorted_idx],
-                    "Mean Importance": result.importances_mean[sorted_idx],
-                    "Std": result.importances_std[sorted_idx],
-                })
+                importance_df = pd.DataFrame(
+                    {
+                        "Feature": [feature_names[i] for i in sorted_idx],
+                        "Mean Importance": result.importances_mean[sorted_idx],
+                        "Std": result.importances_std[sorted_idx],
+                    }
+                )
                 st.dataframe(importance_df, hide_index=True)
 
     with st.expander("How It Works"):
@@ -277,7 +288,9 @@ def partial_dependence_section():
                 kind = "both" if show_ice else "average"
 
                 PartialDependenceDisplay.from_estimator(
-                    model, X_train, [feature_idx],
+                    model,
+                    X_train,
+                    [feature_idx],
                     kind=kind,
                     ax=ax,
                     random_state=42,

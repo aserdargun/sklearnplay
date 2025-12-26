@@ -14,7 +14,7 @@ def main():
     st.title("💾 Model Persistence")
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     st.markdown("""
     Save trained models to disk and load them later for predictions.
@@ -50,7 +50,8 @@ def joblib_section():
     objects containing large numpy arrays.
     """)
 
-    st.code("""
+    st.code(
+        """
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 
@@ -66,21 +67,27 @@ loaded_model = joblib.load("model.joblib")
 
 # Use for predictions
 predictions = loaded_model.predict(X_test)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("With Compression")
 
-    st.code("""
+    st.code(
+        """
 # Save with compression (smaller file, slower save/load)
 joblib.dump(model, "model.joblib.gz", compress=3)
 
 # Load compressed file (automatic detection)
 model = joblib.load("model.joblib.gz")
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Saving Full Pipelines")
 
-    st.code("""
+    st.code(
+        """
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -98,7 +105,9 @@ joblib.dump(pipeline, "pipeline.joblib")
 # Load and use
 pipeline = joblib.load("pipeline.joblib")
 predictions = pipeline.predict(X_new)
-    """, language="python")
+    """,
+        language="python",
+    )
 
 
 def pickle_section():
@@ -109,7 +118,8 @@ def pickle_section():
     Standard Python serialization. Works but less efficient than joblib for large arrays.
     """)
 
-    st.code("""
+    st.code(
+        """
 import pickle
 
 # Save
@@ -119,7 +129,9 @@ with open("model.pkl", "wb") as f:
 # Load
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.warning("""
     **Prefer joblib over pickle for sklearn models.** Joblib is more efficient for
@@ -138,7 +150,8 @@ def skops_section():
     publishing to Hugging Face Hub.
     """)
 
-    st.code("""
+    st.code(
+        """
 # Install: pip install skops
 
 import skops.io as sio
@@ -152,12 +165,15 @@ print(unknown_types)  # Review before loading
 
 # Load with trusted types
 model = sio.load("model.skops", trusted=unknown_types)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Publishing to Hugging Face")
 
     if level in ("intermediate", "advanced"):
-        st.code("""
+        st.code(
+            """
 from skops import hub_utils, card
 
 # Create model card
@@ -173,7 +189,9 @@ hub_utils.push(
     source="model.skops",
     model_card=model_card,
 )
-        """, language="python")
+        """,
+            language="python",
+        )
 
 
 def security_section():
@@ -215,7 +233,8 @@ def security_section():
     - Consider retraining with new versions
     """)
 
-    st.code("""
+    st.code(
+        """
 import sklearn
 import joblib
 
@@ -233,7 +252,9 @@ data = joblib.load("model_with_metadata.joblib")
 if data["sklearn_version"] != sklearn.__version__:
     print(f"Warning: Model trained with {data['sklearn_version']}, "
           f"current version is {sklearn.__version__}")
-    """, language="python")
+    """,
+        language="python",
+    )
 
 
 if __name__ == "__main__":

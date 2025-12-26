@@ -4,20 +4,11 @@ Provides ColumnTransformer builders and preprocessing pipeline assembly.
 """
 
 from typing import Literal
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import (
-    StandardScaler,
-    MinMaxScaler,
-    RobustScaler,
-    MaxAbsScaler,
-    OneHotEncoder,
-    OrdinalEncoder,
-    LabelEncoder,
-)
-from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.feature_selection import (
     SelectKBest,
     SelectPercentile,
@@ -26,11 +17,19 @@ from sklearn.feature_selection import (
     mutual_info_classif,
     mutual_info_regression,
 )
-from sklearn.decomposition import PCA, TruncatedSVD
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.impute import KNNImputer, SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import (
+    LabelEncoder,
+    MaxAbsScaler,
+    MinMaxScaler,
+    OneHotEncoder,
+    OrdinalEncoder,
+    RobustScaler,
+    StandardScaler,
+)
 
 from skplay.core.datasets import TaskType
-
 
 # Available preprocessing options
 NUMERIC_SCALERS = {
@@ -159,8 +158,9 @@ class PreprocessingBuilder:
 
         # Imputation
         if self.numeric_imputer != "none":
-            imputer = NUMERIC_IMPUTERS[self.numeric_imputer]()
-            steps.append(("imputer", imputer))
+            imputer_fn = NUMERIC_IMPUTERS[self.numeric_imputer]
+            if imputer_fn is not None:
+                steps.append(("imputer", imputer_fn()))
 
         # Scaling
         if self.numeric_scaler != "none":
@@ -178,8 +178,9 @@ class PreprocessingBuilder:
 
         # Imputation
         if self.categorical_imputer != "none":
-            imputer = CATEGORICAL_IMPUTERS[self.categorical_imputer]()
-            steps.append(("imputer", imputer))
+            imputer_fn = CATEGORICAL_IMPUTERS[self.categorical_imputer]
+            if imputer_fn is not None:
+                steps.append(("imputer", imputer_fn()))
 
         # Encoding
         encoder = CATEGORICAL_ENCODERS[self.categorical_encoder]()
@@ -238,7 +239,9 @@ class PreprocessingBuilder:
         elif self.feature_selector == "selectkbest_mutual_info":
             return SelectKBest(score_func=mi_score_func, k=self.feature_selector_k)
         elif self.feature_selector == "selectpercentile_f":
-            return SelectPercentile(score_func=f_score_func, percentile=self.feature_selector_percentile)
+            return SelectPercentile(
+                score_func=f_score_func, percentile=self.feature_selector_percentile
+            )
 
         return None
 
@@ -266,9 +269,7 @@ class PreprocessingBuilder:
         Returns:
             Tuple of (Pipeline, numeric_cols, categorical_cols)
         """
-        numeric_cols, categorical_cols = identify_column_types(
-            X, force_categorical, force_numeric
-        )
+        numeric_cols, categorical_cols = identify_column_types(X, force_categorical, force_numeric)
 
         steps = []
 

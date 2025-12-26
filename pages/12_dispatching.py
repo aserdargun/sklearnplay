@@ -7,7 +7,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Dispatching", page_icon="🔌", layout="wide")
 
-from skplay.ui.level import get_level, level_selector
+from skplay.ui.level import level_selector
 
 
 def main():
@@ -53,7 +53,8 @@ def main():
 
         st.subheader("Enabling Array API")
 
-        st.code("""
+        st.code(
+            """
 import sklearn
 from sklearn import config_context
 
@@ -63,11 +64,14 @@ sklearn.set_config(array_api_dispatch=True)
 # Or for a specific context
 with config_context(array_api_dispatch=True):
     model.fit(X, y)  # Uses the array's native backend
-        """, language="python")
+        """,
+            language="python",
+        )
 
         st.subheader("Using with CuPy (GPU)")
 
-        st.code("""
+        st.code(
+            """
 import cupy as cp
 import sklearn
 from sklearn.linear_model import Ridge
@@ -87,11 +91,14 @@ predictions = model.predict(X_gpu)
 
 # Convert back to NumPy if needed
 predictions_cpu = cp.asnumpy(predictions)
-        """, language="python")
+        """,
+            language="python",
+        )
 
         st.subheader("Using with PyTorch")
 
-        st.code("""
+        st.code(
+            """
 import torch
 import sklearn
 from sklearn.decomposition import PCA
@@ -107,7 +114,9 @@ X_reduced = pca.fit_transform(X_torch)
 
 # Result is a PyTorch tensor on GPU
 print(type(X_reduced))  # torch.Tensor
-        """, language="python")
+        """,
+            language="python",
+        )
 
         st.subheader("Supported Estimators")
 
@@ -138,7 +147,8 @@ print(type(X_reduced))  # torch.Tensor
         if level == "advanced":
             st.subheader("Checking Backend Support")
 
-            st.code("""
+            st.code(
+                """
 import sklearn.utils._array_api as array_api
 
 # Check if estimator supports array API
@@ -152,7 +162,9 @@ try:
         ridge.fit(X_gpu, y_gpu)
 except Exception as e:
     print(f"Array API not supported: {e}")
-            """, language="python")
+            """,
+                language="python",
+            )
 
 
 if __name__ == "__main__":

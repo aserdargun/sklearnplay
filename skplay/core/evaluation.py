@@ -4,48 +4,41 @@ Provides metrics computation, cross-validation, and visualization functions.
 """
 
 from typing import Any, Literal
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
-from sklearn.base import BaseEstimator, is_classifier, is_regressor
-from sklearn.pipeline import Pipeline
+import matplotlib.pyplot as plt
+import numpy as np
+
+matplotlib.use("Agg")  # Use non-interactive backend
+from sklearn.base import BaseEstimator
+from sklearn.inspection import permutation_importance
+from sklearn.metrics import (
+    # Classification
+    accuracy_score,
+    average_precision_score,
+    calinski_harabasz_score,
+    confusion_matrix,
+    davies_bouldin_score,
+    f1_score,
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    # Regression
+    mean_squared_error,
+    precision_recall_curve,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+    # Clustering
+    silhouette_score,
+)
 from sklearn.model_selection import (
     cross_validate,
     learning_curve,
     validation_curve,
-    train_test_split,
 )
-from sklearn.metrics import (
-    # Classification
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    average_precision_score,
-    confusion_matrix,
-    classification_report,
-    roc_curve,
-    precision_recall_curve,
-    # Regression
-    mean_squared_error,
-    mean_absolute_error,
-    r2_score,
-    mean_absolute_percentage_error,
-    # Clustering
-    silhouette_score,
-    calinski_harabasz_score,
-    davies_bouldin_score,
-)
-from sklearn.inspection import permutation_importance
-
-try:
-    from sklearn.inspection import PartialDependenceDisplay
-    PDP_AVAILABLE = True
-except ImportError:
-    PDP_AVAILABLE = False
+from sklearn.pipeline import Pipeline
 
 from skplay.core.datasets import TaskType
 
@@ -199,7 +192,9 @@ def compute_outlier_metrics(
     """
     # Convert predictions to binary (outlier detection models return -1/1)
     y_pred_binary = (y_pred == -1).astype(int) if -1 in y_pred else y_pred
-    y_true_binary = (y_true == 1).astype(int) if isinstance(y_true[0], (int, np.integer)) else y_true
+    y_true_binary = (
+        (y_true == 1).astype(int) if isinstance(y_true[0], (int, np.integer)) else y_true
+    )
 
     metrics = {
         "precision": precision_score(y_true_binary, y_pred_binary, zero_division=0),
@@ -238,7 +233,7 @@ def evaluate_model(
     Returns:
         Dictionary with train/test metrics and predictions
     """
-    result = {
+    result: dict[str, Any] = {
         "task_type": task_type,
         "train_metrics": {},
         "test_metrics": {},
@@ -265,9 +260,7 @@ def evaluate_model(
                 y_test_proba = model.predict_proba(X_test)
             except Exception:
                 pass
-        result["test_metrics"] = compute_classification_metrics(
-            y_test, y_test_pred, y_test_proba
-        )
+        result["test_metrics"] = compute_classification_metrics(y_test, y_test_pred, y_test_proba)
 
         result["y_pred"] = y_test_pred
         result["y_proba"] = y_test_proba
@@ -313,8 +306,10 @@ def evaluate_model(
             # Convert string labels to binary if needed
             if y_test.dtype == object:
                 # Assume 'fraud', 'outlier', 'anomaly' etc. are the positive class
-                positive_labels = {'fraud', 'outlier', 'anomaly', '1', 'true', 'yes'}
-                y_test_binary = np.array([1 if str(y).lower() in positive_labels else 0 for y in y_test])
+                positive_labels = {"fraud", "outlier", "anomaly", "1", "true", "yes"}
+                y_test_binary = np.array(
+                    [1 if str(y).lower() in positive_labels else 0 for y in y_test]
+                )
             else:
                 y_test_binary = y_test
 
@@ -357,7 +352,9 @@ def run_cross_validation(
 
     try:
         cv_results = cross_validate(
-            model, X, y,
+            model,
+            X,
+            y,
             cv=cv,
             scoring=scoring,
             return_train_score=True,
@@ -385,6 +382,7 @@ def run_cross_validation(
 # Visualization Functions
 # =============================================================================
 
+
 def plot_confusion_matrix(
     cm: np.ndarray,
     labels: list[str] | None = None,
@@ -402,7 +400,7 @@ def plot_confusion_matrix(
     """
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
     ax.figure.colorbar(im, ax=ax)
 
     if labels:
@@ -415,15 +413,20 @@ def plot_confusion_matrix(
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     # Add text annotations
-    thresh = cm.max() / 2.
+    thresh = cm.max() / 2.0
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
-            ax.text(j, i, format(cm[i, j], 'd'),
-                   ha="center", va="center",
-                   color="white" if cm[i, j] > thresh else "black")
+            ax.text(
+                j,
+                i,
+                format(cm[i, j], "d"),
+                ha="center",
+                va="center",
+                color="white" if cm[i, j] > thresh else "black",
+            )
 
-    ax.set_xlabel('Predicted')
-    ax.set_ylabel('True')
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
     ax.set_title(title)
     fig.tight_layout()
 
@@ -455,14 +458,14 @@ def plot_roc_curve(
     fpr, tpr, _ = roc_curve(y_true, y_score)
     auc = roc_auc_score(y_true, y_score)
 
-    ax.plot(fpr, tpr, 'b-', linewidth=2, label=f'ROC (AUC = {auc:.3f})')
-    ax.plot([0, 1], [0, 1], 'k--', linewidth=1, label='Random')
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
+    ax.plot(fpr, tpr, "b-", linewidth=2, label=f"ROC (AUC = {auc:.3f})")
+    ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Random")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
     ax.set_title(title)
-    ax.legend(loc='lower right')
-    ax.set_xlim([0, 1])
-    ax.set_ylim([0, 1.05])
+    ax.legend(loc="lower right")
+    ax.set_xlim((0, 1))
+    ax.set_ylim((0, 1.05))
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
@@ -494,13 +497,13 @@ def plot_precision_recall_curve(
     precision, recall, _ = precision_recall_curve(y_true, y_score)
     ap = average_precision_score(y_true, y_score)
 
-    ax.plot(recall, precision, 'b-', linewidth=2, label=f'PR (AP = {ap:.3f})')
-    ax.set_xlabel('Recall')
-    ax.set_ylabel('Precision')
+    ax.plot(recall, precision, "b-", linewidth=2, label=f"PR (AP = {ap:.3f})")
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
     ax.set_title(title)
-    ax.legend(loc='lower left')
-    ax.set_xlim([0, 1])
-    ax.set_ylim([0, 1.05])
+    ax.legend(loc="lower left")
+    ax.set_xlim((0, 1))
+    ax.set_ylim((0, 1.05))
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
@@ -527,18 +530,18 @@ def plot_residuals(
     residuals = y_true - y_pred
 
     # Residuals vs Predicted
-    axes[0].scatter(y_pred, residuals, alpha=0.5, edgecolors='k', linewidth=0.5)
-    axes[0].axhline(y=0, color='r', linestyle='--', linewidth=1)
-    axes[0].set_xlabel('Predicted Values')
-    axes[0].set_ylabel('Residuals')
-    axes[0].set_title('Residuals vs Predicted')
+    axes[0].scatter(y_pred, residuals, alpha=0.5, edgecolors="k", linewidth=0.5)
+    axes[0].axhline(y=0, color="r", linestyle="--", linewidth=1)
+    axes[0].set_xlabel("Predicted Values")
+    axes[0].set_ylabel("Residuals")
+    axes[0].set_title("Residuals vs Predicted")
     axes[0].grid(True, alpha=0.3)
 
     # Residual histogram
-    axes[1].hist(residuals, bins=30, edgecolor='black', alpha=0.7)
-    axes[1].set_xlabel('Residual Value')
-    axes[1].set_ylabel('Frequency')
-    axes[1].set_title('Residual Distribution')
+    axes[1].hist(residuals, bins=30, edgecolor="black", alpha=0.7)
+    axes[1].set_xlabel("Residual Value")
+    axes[1].set_ylabel("Frequency")
+    axes[1].set_title("Residual Distribution")
     axes[1].grid(True, alpha=0.3)
 
     fig.suptitle(title)
@@ -564,15 +567,15 @@ def plot_actual_vs_predicted(
     """
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.scatter(y_true, y_pred, alpha=0.5, edgecolors='k', linewidth=0.5)
+    ax.scatter(y_true, y_pred, alpha=0.5, edgecolors="k", linewidth=0.5)
 
     # Perfect prediction line
     min_val = min(y_true.min(), y_pred.min())
     max_val = max(y_true.max(), y_pred.max())
-    ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect')
+    ax.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=2, label="Perfect")
 
-    ax.set_xlabel('Actual')
-    ax.set_ylabel('Predicted')
+    ax.set_xlabel("Actual")
+    ax.set_ylabel("Predicted")
     ax.set_title(title)
     ax.legend()
     ax.grid(True, alpha=0.3)
@@ -618,17 +621,19 @@ def plot_learning_curve(
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    ax.fill_between(train_sizes_abs, train_mean - train_std, train_mean + train_std,
-                    alpha=0.1, color='blue')
-    ax.fill_between(train_sizes_abs, test_mean - test_std, test_mean + test_std,
-                    alpha=0.1, color='orange')
-    ax.plot(train_sizes_abs, train_mean, 'o-', color='blue', label='Training score')
-    ax.plot(train_sizes_abs, test_mean, 'o-', color='orange', label='Validation score')
+    ax.fill_between(
+        train_sizes_abs, train_mean - train_std, train_mean + train_std, alpha=0.1, color="blue"
+    )
+    ax.fill_between(
+        train_sizes_abs, test_mean - test_std, test_mean + test_std, alpha=0.1, color="orange"
+    )
+    ax.plot(train_sizes_abs, train_mean, "o-", color="blue", label="Training score")
+    ax.plot(train_sizes_abs, test_mean, "o-", color="orange", label="Validation score")
 
-    ax.set_xlabel('Training Set Size')
-    ax.set_ylabel('Score')
+    ax.set_xlabel("Training Set Size")
+    ax.set_ylabel("Score")
     ax.set_title(title)
-    ax.legend(loc='best')
+    ax.legend(loc="best")
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
@@ -661,8 +666,14 @@ def plot_validation_curve(
         Matplotlib figure
     """
     train_scores, test_scores = validation_curve(
-        model, X, y, param_name=param_name, param_range=param_range,
-        cv=cv, scoring=scoring, n_jobs=-1
+        model,
+        X,
+        y,
+        param_name=param_name,
+        param_range=param_range,
+        cv=cv,
+        scoring=scoring,
+        n_jobs=-1,
     )
 
     train_mean = np.mean(train_scores, axis=1)
@@ -672,22 +683,24 @@ def plot_validation_curve(
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    ax.fill_between(param_range, train_mean - train_std, train_mean + train_std,
-                    alpha=0.1, color='blue')
-    ax.fill_between(param_range, test_mean - test_std, test_mean + test_std,
-                    alpha=0.1, color='orange')
-    ax.plot(param_range, train_mean, 'o-', color='blue', label='Training score')
-    ax.plot(param_range, test_mean, 'o-', color='orange', label='Validation score')
+    ax.fill_between(
+        param_range, train_mean - train_std, train_mean + train_std, alpha=0.1, color="blue"
+    )
+    ax.fill_between(
+        param_range, test_mean - test_std, test_mean + test_std, alpha=0.1, color="orange"
+    )
+    ax.plot(param_range, train_mean, "o-", color="blue", label="Training score")
+    ax.plot(param_range, test_mean, "o-", color="orange", label="Validation score")
 
     ax.set_xlabel(param_name)
-    ax.set_ylabel('Score')
-    ax.set_title(title or f'Validation Curve: {param_name}')
-    ax.legend(loc='best')
+    ax.set_ylabel("Score")
+    ax.set_title(title or f"Validation Curve: {param_name}")
+    ax.legend(loc="best")
     ax.grid(True, alpha=0.3)
 
     # Use log scale if range spans orders of magnitude
     if param_range.max() / param_range.min() > 100:
-        ax.set_xscale('log')
+        ax.set_xscale("log")
 
     fig.tight_layout()
 
@@ -729,12 +742,12 @@ def plot_feature_importance(
 
     fig, ax = plt.subplots(figsize=(10, max(6, len(indices) * 0.3)))
 
-    ax.barh(range(len(indices)), importances[indices][::-1], align='center')
+    ax.barh(range(len(indices)), importances[indices][::-1], align="center")
     ax.set_yticks(range(len(indices)))
     ax.set_yticklabels([feature_names[i] for i in indices[::-1]])
-    ax.set_xlabel('Importance')
+    ax.set_xlabel("Importance")
     ax.set_title(title)
-    ax.grid(True, alpha=0.3, axis='x')
+    ax.grid(True, alpha=0.3, axis="x")
     fig.tight_layout()
 
     return fig
@@ -765,23 +778,18 @@ def plot_permutation_importance(
     Returns:
         Matplotlib figure
     """
-    result = permutation_importance(
-        model, X, y, n_repeats=n_repeats, scoring=scoring, n_jobs=-1
-    )
+    result = permutation_importance(model, X, y, n_repeats=n_repeats, scoring=scoring, n_jobs=-1)
 
     # Sort by importance
     sorted_idx = result.importances_mean.argsort()[::-1][:top_n]
 
     fig, ax = plt.subplots(figsize=(10, max(6, len(sorted_idx) * 0.3)))
 
-    ax.boxplot(
-        result.importances[sorted_idx].T,
-        vert=False,
-        labels=[feature_names[i] for i in sorted_idx]
-    )
-    ax.set_xlabel('Decrease in Score')
+    ax.boxplot(result.importances[sorted_idx].T, vert=False)
+    ax.set_yticklabels([feature_names[i] for i in sorted_idx])
+    ax.set_xlabel("Decrease in Score")
     ax.set_title(title)
-    ax.grid(True, alpha=0.3, axis='x')
+    ax.grid(True, alpha=0.3, axis="x")
     fig.tight_layout()
 
     return fig
@@ -825,8 +833,7 @@ def plot_cluster_visualization(
             y_label = "Feature 2"
 
     scatter = ax.scatter(
-        X_2d[:, 0], X_2d[:, 1],
-        c=labels, cmap='viridis', alpha=0.6, edgecolors='k', linewidth=0.5
+        X_2d[:, 0], X_2d[:, 1], c=labels, cmap="viridis", alpha=0.6, edgecolors="k", linewidth=0.5
     )
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -834,7 +841,7 @@ def plot_cluster_visualization(
 
     # Add colorbar
     cbar = plt.colorbar(scatter, ax=ax)
-    cbar.set_label('Cluster')
+    cbar.set_label("Cluster")
 
     fig.tight_layout()
 
@@ -864,7 +871,7 @@ def plot_outlier_scores(
         # Separate scores by class
         # Convert string labels if needed
         if y_true.dtype == object:
-            positive_labels = {'fraud', 'outlier', 'anomaly', '1', 'true', 'yes'}
+            positive_labels = {"fraud", "outlier", "anomaly", "1", "true", "yes"}
             y_binary = np.array([1 if str(y).lower() in positive_labels else 0 for y in y_true])
         else:
             y_binary = y_true
@@ -872,17 +879,17 @@ def plot_outlier_scores(
         normal_scores = scores[y_binary == 0]
         outlier_scores = scores[y_binary == 1]
 
-        ax.hist(normal_scores, bins=30, alpha=0.5, label='Normal', color='blue')
-        ax.hist(outlier_scores, bins=30, alpha=0.5, label='Outlier', color='red')
+        ax.hist(normal_scores, bins=30, alpha=0.5, label="Normal", color="blue")
+        ax.hist(outlier_scores, bins=30, alpha=0.5, label="Outlier", color="red")
         ax.legend()
     else:
-        ax.hist(scores, bins=50, edgecolor='black', alpha=0.7)
+        ax.hist(scores, bins=50, edgecolor="black", alpha=0.7)
 
     if threshold is not None:
-        ax.axvline(x=threshold, color='k', linestyle='--', linewidth=2, label='Threshold')
+        ax.axvline(x=threshold, color="k", linestyle="--", linewidth=2, label="Threshold")
 
-    ax.set_xlabel('Anomaly Score')
-    ax.set_ylabel('Frequency')
+    ax.set_xlabel("Anomaly Score")
+    ax.set_ylabel("Frequency")
     ax.set_title(title)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()

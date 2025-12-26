@@ -3,13 +3,16 @@
 Search and explore the scikit-learn API through introspection.
 """
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="API Explorer", page_icon="🔎", layout="wide")
 
 from skplay.core.api_explorer import (
-    get_explorer, search_api, get_api_entry, generate_example_snippet
+    generate_example_snippet,
+    get_api_entry,
+    get_explorer,
+    search_api,
 )
 from skplay.ui.level import level_selector
 
@@ -47,7 +50,14 @@ def main():
     with col3:
         type_filter = st.selectbox(
             "Estimator Type",
-            options=[None, "classifier", "regressor", "clusterer", "transformer", "outlier_detector"],
+            options=[
+                None,
+                "classifier",
+                "regressor",
+                "clusterer",
+                "transformer",
+                "outlier_detector",
+            ],
             format_func=lambda x: "All" if x is None else x.title(),
             key="api_type",
         )
@@ -89,14 +99,16 @@ def main():
 
         tabs = st.tabs(list(categories.keys()))
 
-        for tab, (cat_name, cat_type) in zip(tabs, categories.items()):
+        for tab, (cat_name, cat_type) in zip(tabs, categories.items(), strict=True):
             with tab:
                 entries = explorer.list_by_type(cat_type)
                 if entries:
                     # Group by module
                     by_module = {}
                     for entry in entries:
-                        module_short = entry.module.split(".")[-1] if "." in entry.module else entry.module
+                        module_short = (
+                            entry.module.split(".")[-1] if "." in entry.module else entry.module
+                        )
                         if module_short not in by_module:
                             by_module[module_short] = []
                         by_module[module_short].append(entry)
@@ -104,7 +116,9 @@ def main():
                     for module_name in sorted(by_module.keys()):
                         st.markdown(f"**{module_name}**")
                         cols = st.columns(4)
-                        for i, entry in enumerate(sorted(by_module[module_name], key=lambda x: x.name)):
+                        for i, entry in enumerate(
+                            sorted(by_module[module_name], key=lambda x: x.name)
+                        ):
                             with cols[i % 4]:
                                 if st.button(entry.name, key=f"btn_{cat_type}_{entry.name}"):
                                     st.session_state.selected_entry = entry.name
@@ -172,11 +186,13 @@ def display_entry_details(entry):
 
         param_data = []
         for param in entry.parameters:
-            param_data.append({
-                "Name": param["name"],
-                "Default": param["default"] if param["default"] else "-",
-                "Description": param.get("description", "")[:100],
-            })
+            param_data.append(
+                {
+                    "Name": param["name"],
+                    "Default": param["default"] if param["default"] else "-",
+                    "Description": param.get("description", "")[:100],
+                }
+            )
 
         st.dataframe(pd.DataFrame(param_data), hide_index=True, use_container_width=True)
 

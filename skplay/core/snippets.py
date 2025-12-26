@@ -4,10 +4,10 @@ Generates Python code that reproduces the current pipeline configuration.
 """
 
 from typing import Any
-import json
+
 from sklearn.base import BaseEstimator
-from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 
 def get_import_statement(class_obj: type) -> str:
@@ -50,7 +50,7 @@ def format_value(value: Any) -> str:
         items = [f"{repr(k)}: {format_value(v)}" for k, v in value.items()]
         return "{" + ", ".join(items) + "}"
     elif callable(value):
-        return value.__name__
+        return str(value.__name__)
     else:
         return repr(value)
 
@@ -76,16 +76,13 @@ def generate_estimator_code(
     default_params = default_estimator.get_params(deep=False)
 
     non_default = {
-        k: v for k, v in params.items()
-        if k in default_params and v != default_params[k]
+        k: v for k, v in params.items() if k in default_params and v != default_params[k]
     }
 
     class_name = type(estimator).__name__
 
     if non_default:
-        param_str = ", ".join(
-            f"{k}={format_value(v)}" for k, v in non_default.items()
-        )
+        param_str = ", ".join(f"{k}={format_value(v)}" for k, v in non_default.items())
         code = f"{var_name} = {class_name}({param_str})"
     else:
         code = f"{var_name} = {class_name}()"
@@ -174,7 +171,9 @@ def generate_column_transformer_code(
             t_imports, t_code = generate_estimator_code(transformer, f"{name}_transformer")
             imports.extend(t_imports)
             transformer_defs.append(t_code)
-            transformer_tuples.append(f"    ('{name}', {name}_transformer, {format_value(columns)}),")
+            transformer_tuples.append(
+                f"    ('{name}', {name}_transformer, {format_value(columns)}),"
+            )
 
     code_lines = [
         *transformer_defs,
@@ -258,24 +257,28 @@ def generate_code_snippet(
     ]
 
     if numeric_cols or categorical_cols:
-        snippet_parts.extend([
-            "# Column definitions",
-            f"numeric_cols = {format_value(numeric_cols or [])}",
-            f"categorical_cols = {format_value(categorical_cols or [])}",
-            "",
-        ])
+        snippet_parts.extend(
+            [
+                "# Column definitions",
+                f"numeric_cols = {format_value(numeric_cols or [])}",
+                f"categorical_cols = {format_value(categorical_cols or [])}",
+                "",
+            ]
+        )
 
-    snippet_parts.extend([
-        "# Train/test split",
-        f"X_train, X_test, y_train, y_test = train_test_split(",
-        f"    X, y, test_size={test_size}, random_state={random_state}",
-        ")",
-        "",
-        "# Build pipeline",
-        pipeline_code,
-        "",
-        "# Fit the model",
-    ])
+    snippet_parts.extend(
+        [
+            "# Train/test split",
+            "X_train, X_test, y_train, y_test = train_test_split(",
+            f"    X, y, test_size={test_size}, random_state={random_state}",
+            ")",
+            "",
+            "# Build pipeline",
+            pipeline_code,
+            "",
+            "# Fit the model",
+        ]
+    )
 
     if isinstance(pipeline, Pipeline):
         snippet_parts.append("pipeline.fit(X_train, y_train)")
@@ -297,20 +300,26 @@ def generate_code_snippet(
     snippet_parts.append("# Evaluation")
 
     if task_type == "classification":
-        snippet_parts.extend([
-            "print(f'Accuracy: {accuracy_score(y_test, y_pred):.4f}')",
-            "print(classification_report(y_test, y_pred))",
-        ])
+        snippet_parts.extend(
+            [
+                "print(f'Accuracy: {accuracy_score(y_test, y_pred):.4f}')",
+                "print(classification_report(y_test, y_pred))",
+            ]
+        )
     elif task_type == "regression":
-        snippet_parts.extend([
-            "print(f'R² Score: {r2_score(y_test, y_pred):.4f}')",
-            "print(f'RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f}')",
-        ])
+        snippet_parts.extend(
+            [
+                "print(f'R² Score: {r2_score(y_test, y_pred):.4f}')",
+                "print(f'RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f}')",
+            ]
+        )
     elif task_type == "clustering":
-        snippet_parts.extend([
-            "labels = y_pred",
-            "print(f'Silhouette Score: {silhouette_score(X_test, labels):.4f}')",
-        ])
+        snippet_parts.extend(
+            [
+                "labels = y_pred",
+                "print(f'Silhouette Score: {silhouette_score(X_test, labels):.4f}')",
+            ]
+        )
 
     return "\n".join(snippet_parts)
 
@@ -337,7 +346,8 @@ def generate_minimal_snippet(
     try:
         default_params = estimator_class().get_params(deep=False)
         non_default = {
-            k: v for k, v in estimator_params.items()
+            k: v
+            for k, v in estimator_params.items()
             if k in default_params and v != default_params[k]
         }
     except Exception:

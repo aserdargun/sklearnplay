@@ -1,11 +1,9 @@
 """Tests for the dataset registry."""
 
-import pytest
 import pandas as pd
-import numpy as np
+import pytest
 
 from skplay.core.datasets import (
-    DatasetRegistry,
     get_dataset,
     list_datasets,
     list_datasets_by_domain,

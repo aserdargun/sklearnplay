@@ -1,15 +1,15 @@
 """Reusable UI components for the Streamlit app."""
 
-from typing import Any, Literal
-import streamlit as st
-import pandas as pd
-import numpy as np
 import io
-import joblib
+from typing import Any
 
-from skplay.core.datasets import DatasetCard, DatasetResult
+import joblib
+import pandas as pd
+import streamlit as st
+
+from skplay.core.datasets import DatasetCard, TaskType
 from skplay.core.estimators import EstimatorInfo
-from skplay.ui.level import get_level, should_show_param, format_help_text, get_level_config
+from skplay.ui.level import Level, get_level, get_level_config, should_show_param
 
 
 def show_dataset_card(card: DatasetCard) -> None:
@@ -41,11 +41,15 @@ def show_dataset_card(card: DatasetCard) -> None:
     with st.expander("Feature Details"):
         feature_data = []
         for f in card.features:
-            feature_data.append({
-                "Name": f.name,
-                "Type": f.dtype,
-                "Description": f.description[:50] + "..." if len(f.description) > 50 else f.description,
-            })
+            feature_data.append(
+                {
+                    "Name": f.name,
+                    "Type": f.dtype,
+                    "Description": f.description[:50] + "..."
+                    if len(f.description) > 50
+                    else f.description,
+                }
+            )
         st.dataframe(pd.DataFrame(feature_data), use_container_width=True, hide_index=True)
 
 
@@ -103,8 +107,8 @@ def show_metrics_table(
 
     # Display as columns
     cols = st.columns(len(formatted))
-    for col, (name, value) in zip(cols, formatted.items()):
-        col.metric(name.upper().replace("_", " "), value)
+    for col, (metric_name, metric_value) in zip(cols, formatted.items(), strict=True):
+        col.metric(metric_name.upper().replace("_", " "), metric_value)
 
 
 def show_parameter_controls(
@@ -134,13 +138,14 @@ def show_parameter_controls(
 
     # Filter params by level
     visible_params = {
-        name: value for name, value in all_params.items()
+        name: value
+        for name, value in all_params.items()
         if should_show_param(name, estimator_info.name)
     }
 
     # Limit number of params shown
     if len(visible_params) > config["max_params_shown"]:
-        visible_params = dict(list(visible_params.items())[:config["max_params_shown"]])
+        visible_params = dict(list(visible_params.items())[: config["max_params_shown"]])
 
     params = {}
 
@@ -158,9 +163,7 @@ def show_parameter_controls(
         widget_key = f"{key_prefix}_{param_name}"
 
         # Determine widget type based on default value
-        value = render_param_widget(
-            param_name, default_value, widget_key, estimator_info.name
-        )
+        value = render_param_widget(param_name, default_value, widget_key, estimator_info.name)
         if value is not None:
             params[f"{prefix}{param_name}" if prefix else param_name] = value
 
@@ -222,15 +225,25 @@ def render_param_widget(
     elif isinstance(default_value, float):
         # Determine reasonable range
         if "learning_rate" in param_name:
-            return st.slider(param_name, 0.001, 1.0, default_value, step=0.01, key=key, help=help_text)
+            return st.slider(
+                param_name, 0.001, 1.0, default_value, step=0.01, key=key, help=help_text
+            )
         elif param_name in ("C", "alpha"):
-            return st.slider(param_name, 0.001, 100.0, float(default_value), key=key, help=help_text)
+            return st.slider(
+                param_name, 0.001, 100.0, float(default_value), key=key, help=help_text
+            )
         elif param_name in ("contamination", "subsample"):
-            return st.slider(param_name, 0.01, 1.0, default_value, step=0.01, key=key, help=help_text)
+            return st.slider(
+                param_name, 0.01, 1.0, default_value, step=0.01, key=key, help=help_text
+            )
         elif param_name == "eps":
-            return st.slider(param_name, 0.01, 5.0, default_value, step=0.1, key=key, help=help_text)
+            return st.slider(
+                param_name, 0.01, 5.0, default_value, step=0.1, key=key, help=help_text
+            )
         elif param_name == "tol":
-            return st.number_input(param_name, 0.0, 1.0, default_value, format="%.6f", key=key, help=help_text)
+            return st.number_input(
+                param_name, 0.0, 1.0, default_value, format="%.6f", key=key, help=help_text
+            )
         else:
             return st.number_input(param_name, value=float(default_value), key=key, help=help_text)
 
@@ -249,7 +262,7 @@ def render_param_widget(
             param_name,
             str(default_value),
             key=key,
-            help=help_text + " (enter as tuple, e.g., (100, 50))"
+            help=help_text + " (enter as tuple, e.g., (100, 50))",
         )
         try:
             return eval(value_str)
@@ -261,7 +274,7 @@ def render_param_widget(
         return default_value
 
 
-def get_param_options(param_name: str, estimator_name: str) -> list[str] | None:
+def get_param_options(param_name: str, estimator_name: str) -> list[str | None] | None:
     """Get valid options for a string parameter.
 
     Args:
@@ -271,11 +284,30 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str] | None:
     Returns:
         List of options or None
     """
-    options_map = {
+    options_map: dict[str, list[str | None]] = {
         "kernel": ["linear", "poly", "rbf", "sigmoid"],
-        "solver": ["auto", "svd", "cholesky", "lsqr", "sparse_cg", "sag", "saga", "lbfgs", "liblinear", "newton-cg"],
+        "solver": [
+            "auto",
+            "svd",
+            "cholesky",
+            "lsqr",
+            "sparse_cg",
+            "sag",
+            "saga",
+            "lbfgs",
+            "liblinear",
+            "newton-cg",
+        ],
         "penalty": [None, "l1", "l2", "elasticnet"],
-        "criterion": ["gini", "entropy", "log_loss", "squared_error", "friedman_mse", "absolute_error", "poisson"],
+        "criterion": [
+            "gini",
+            "entropy",
+            "log_loss",
+            "squared_error",
+            "friedman_mse",
+            "absolute_error",
+            "poisson",
+        ],
         "max_features": [None, "sqrt", "log2"],
         "init": ["k-means++", "random"],
         "linkage": ["ward", "complete", "average", "single"],
@@ -283,7 +315,15 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str] | None:
         "weights": ["uniform", "distance"],
         "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
         "activation": ["identity", "logistic", "tanh", "relu"],
-        "loss": ["hinge", "log_loss", "modified_huber", "squared_hinge", "perceptron", "squared_error", "huber"],
+        "loss": [
+            "hinge",
+            "log_loss",
+            "modified_huber",
+            "squared_hinge",
+            "perceptron",
+            "squared_error",
+            "huber",
+        ],
         "learning_rate": ["constant", "optimal", "invscaling", "adaptive"],
         "covariance_type": ["full", "tied", "diag", "spherical"],
         "multi_class": ["auto", "ovr", "multinomial"],
@@ -370,8 +410,8 @@ def create_download_button(
 
 
 def show_estimator_selector(
-    task_type: str,
-    level: str,
+    task_type: TaskType,
+    level: Level,
     key: str = "estimator_select",
 ) -> EstimatorInfo | None:
     """Show estimator selection widget.
@@ -384,7 +424,7 @@ def show_estimator_selector(
     Returns:
         Selected estimator info or None
     """
-    from skplay.core.estimators import get_estimators_for_task, get_default_estimator
+    from skplay.core.estimators import get_default_estimator, get_estimators_for_task
 
     estimators = get_estimators_for_task(task_type, level)
 
@@ -501,11 +541,10 @@ def show_preprocessing_controls(
     Returns:
         Preprocessing configuration dictionary
     """
-    from skplay.core.preprocessing import get_preprocessing_options, get_preprocessing_help
+    from skplay.core.preprocessing import get_preprocessing_options
 
     level = get_level()
     options = get_preprocessing_options(level)
-    help_texts = get_preprocessing_help()
 
     config = {}
 
@@ -522,7 +561,8 @@ def show_preprocessing_controls(
                 "Imputation",
                 options=options["numeric_imputers"],
                 index=options["numeric_imputers"].index("median")
-                if "median" in options["numeric_imputers"] else 0,
+                if "median" in options["numeric_imputers"]
+                else 0,
                 key=f"{key_prefix}_num_imputer",
                 help="Strategy for handling missing numeric values",
             )
@@ -531,7 +571,8 @@ def show_preprocessing_controls(
                 "Scaling",
                 options=options["numeric_scalers"],
                 index=options["numeric_scalers"].index("standard")
-                if "standard" in options["numeric_scalers"] else 0,
+                if "standard" in options["numeric_scalers"]
+                else 0,
                 key=f"{key_prefix}_num_scaler",
                 help="Feature scaling method",
             )
@@ -622,7 +663,7 @@ def show_training_button(key: str = "train_btn") -> bool:
         "🚀 Train Model",
         key=key,
         type="primary",
-        use_container_width=True,
+        width="stretch",
     )
 
 

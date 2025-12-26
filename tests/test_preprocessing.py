@@ -1,17 +1,15 @@
 """Tests for preprocessing utilities."""
 
-import pytest
-import pandas as pd
 import numpy as np
-from sklearn.pipeline import Pipeline
+import pandas as pd
 
+from skplay.core.datasets import get_dataset
 from skplay.core.preprocessing import (
     PreprocessingBuilder,
-    identify_column_types,
     encode_target,
     get_preprocessing_options,
+    identify_column_types,
 )
-from skplay.core.datasets import get_dataset
 
 
 class TestPreprocessingBuilder:
@@ -85,11 +83,13 @@ class TestIdentifyColumnTypes:
 
     def test_identify_numeric(self):
         """Test identifying numeric columns."""
-        df = pd.DataFrame({
-            "a": [1, 2, 3],
-            "b": [1.0, 2.0, 3.0],
-            "c": ["x", "y", "z"],
-        })
+        df = pd.DataFrame(
+            {
+                "a": [1, 2, 3],
+                "b": [1.0, 2.0, 3.0],
+                "c": ["x", "y", "z"],
+            }
+        )
 
         numeric, categorical = identify_column_types(df)
         assert "a" in numeric
@@ -98,10 +98,12 @@ class TestIdentifyColumnTypes:
 
     def test_force_types(self):
         """Test forcing column types."""
-        df = pd.DataFrame({
-            "a": [1, 2, 3],
-            "b": [1.0, 2.0, 3.0],
-        })
+        df = pd.DataFrame(
+            {
+                "a": [1, 2, 3],
+                "b": [1.0, 2.0, 3.0],
+            }
+        )
 
         numeric, categorical = identify_column_types(
             df,

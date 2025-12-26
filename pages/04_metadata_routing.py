@@ -10,7 +10,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Metadata Routing", page_icon="🔀", layout="wide")
 
-from skplay.ui.level import get_level, level_selector
+from skplay.ui.level import level_selector
 
 
 def main():
@@ -27,7 +27,9 @@ def main():
     """)
 
     if level == "beginner":
-        st.info("This is an advanced topic. Switch to Intermediate or Advanced level for full content.")
+        st.info(
+            "This is an advanced topic. Switch to Intermediate or Advanced level for full content."
+        )
 
         st.markdown("""
         ### Quick Summary
@@ -69,7 +71,8 @@ def main():
         """)
 
         # Code example
-        st.code("""
+        st.code(
+            """
 import sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_validate
@@ -87,12 +90,15 @@ results = cross_validate(
     cv=5,
     params={"sample_weight": weights}
 )
-        """, language="python")
+        """,
+            language="python",
+        )
 
         st.markdown("---")
         st.subheader("Routing Through Pipelines")
 
-        st.code("""
+        st.code(
+            """
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -108,12 +114,15 @@ pipe.set_fit_request(clf__sample_weight=True)
 
 # Fit with sample weights
 pipe.fit(X, y, clf__sample_weight=weights)
-        """, language="python")
+        """,
+            language="python",
+        )
 
         st.markdown("---")
         st.subheader("Routing with Cross-Validation")
 
-        st.code("""
+        st.code(
+            """
 from sklearn.model_selection import cross_validate, GroupKFold
 from sklearn.linear_model import Ridge
 
@@ -133,13 +142,16 @@ results = cross_validate(
         "groups": groups,  # For GroupKFold
     }
 )
-        """, language="python")
+        """,
+            language="python",
+        )
 
         if level == "advanced":
             st.markdown("---")
             st.subheader("Custom Routing Configuration")
 
-            st.code("""
+            st.code(
+                """
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.metadata_routing import (
     MetadataRouter,
@@ -167,7 +179,9 @@ class CustomEstimator(BaseEstimator, ClassifierMixin):
             # Apply weights to fitting
             pass
         return self
-            """, language="python")
+            """,
+                language="python",
+            )
 
         # Best practices
         st.markdown("---")
@@ -191,7 +205,6 @@ class CustomEstimator(BaseEstimator, ClassifierMixin):
         """)
 
         import numpy as np
-        import pandas as pd
 
         col1, col2 = st.columns(2)
 
@@ -218,11 +231,12 @@ class CustomEstimator(BaseEstimator, ClassifierMixin):
 
         # Without weights
         from sklearn.linear_model import LinearRegression
+
         lr1 = LinearRegression()
         lr1.fit(X_demo, y_demo)
 
         axes[0].scatter(X_demo, y_demo)
-        axes[0].plot(X_demo, lr1.predict(X_demo), 'r-', linewidth=2)
+        axes[0].plot(X_demo, lr1.predict(X_demo), "r-", linewidth=2)
         axes[0].set_title("Without Sample Weights")
         axes[0].set_xlabel("X")
         axes[0].set_ylabel("y")
@@ -234,15 +248,17 @@ class CustomEstimator(BaseEstimator, ClassifierMixin):
         lr2 = LinearRegression()
         lr2.fit(X_demo, y_demo, sample_weight=weights)
 
-        axes[1].scatter(X_demo, y_demo, c=weights, cmap='RdYlGn', vmin=0, vmax=1)
-        axes[1].plot(X_demo, lr2.predict(X_demo), 'r-', linewidth=2)
+        axes[1].scatter(X_demo, y_demo, c=weights, cmap="RdYlGn", vmin=0, vmax=1)
+        axes[1].plot(X_demo, lr2.predict(X_demo), "r-", linewidth=2)
         axes[1].set_title("With Sample Weights (outliers downweighted)")
         axes[1].set_xlabel("X")
         axes[1].set_ylabel("y")
 
         st.pyplot(fig)
 
-        st.caption("Green = high weight, Red = low weight. Notice how the line fits the majority better with weights.")
+        st.caption(
+            "Green = high weight, Red = low weight. Notice how the line fits the majority better with weights."
+        )
 
 
 if __name__ == "__main__":

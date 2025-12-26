@@ -6,29 +6,33 @@ This page covers:
 - Outlier Detection (Isolation Forest, LOF, etc.)
 """
 
-import streamlit as st
-import pandas as pd
 import numpy as np
-from sklearn.pipeline import Pipeline
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
+import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="Unsupervised Learning", page_icon="🔍", layout="wide")
 
 from skplay.core.datasets import DatasetRegistry, get_dataset
-from skplay.core.preprocessing import PreprocessingBuilder, identify_column_types
-from skplay.core.estimators import get_estimators_for_task, create_estimator
+from skplay.core.estimators import create_estimator
 from skplay.core.evaluation import (
-    evaluate_model, compute_clustering_metrics, compute_outlier_metrics,
-    plot_cluster_visualization, plot_outlier_scores
+    compute_clustering_metrics,
+    compute_outlier_metrics,
+    plot_cluster_visualization,
+    plot_outlier_scores,
 )
+from skplay.core.preprocessing import PreprocessingBuilder, identify_column_types
 from skplay.core.snippets import generate_code_snippet
-from skplay.ui.level import get_level, get_level_config, level_selector
 from skplay.ui.components import (
-    show_dataset_card, show_data_preview, show_metrics_table,
-    show_parameter_controls, show_code_snippet, create_download_button,
-    show_estimator_selector, show_preprocessing_controls, show_training_button,
+    show_code_snippet,
+    show_data_preview,
+    show_dataset_card,
+    show_estimator_selector,
+    show_metrics_table,
+    show_parameter_controls,
+    show_preprocessing_controls,
+    show_training_button,
 )
+from skplay.ui.level import get_level, get_level_config, level_selector
 
 
 def main():
@@ -47,7 +51,7 @@ def main():
     """)
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
         st.markdown("---")
 
     # Task type selection
@@ -113,7 +117,6 @@ def data_section(task_type):
             available = DatasetRegistry.list_by_task("clustering")
             # Also include any dataset without target
             for name in DatasetRegistry.list_all():
-                card = DatasetRegistry.get_card(name)
                 if name not in available:
                     available.append(name)
         else:
@@ -293,7 +296,7 @@ def train_unsupervised_model(data_result, preproc_config, estimator_info, params
         if y is not None:
             # Convert labels if needed
             if y.dtype == object:
-                positive_labels = {'fraud', 'outlier', 'anomaly', '1', 'true', 'yes'}
+                positive_labels = {"fraud", "outlier", "anomaly", "1", "true", "yes"}
                 y_binary = np.array([1 if str(v).lower() in positive_labels else 0 for v in y])
             else:
                 y_binary = y.values
@@ -354,11 +357,13 @@ def results_section(model_result, data_result, task_type):
         summary_data = []
         for label in unique_labels:
             mask = labels == label
-            summary_data.append({
-                "Cluster": label if label >= 0 else "Noise",
-                "Count": mask.sum(),
-                "Percentage": f"{mask.mean() * 100:.1f}%",
-            })
+            summary_data.append(
+                {
+                    "Cluster": label if label >= 0 else "Noise",
+                    "Count": mask.sum(),
+                    "Percentage": f"{mask.mean() * 100:.1f}%",
+                }
+            )
 
         st.dataframe(pd.DataFrame(summary_data), hide_index=True)
 
@@ -377,7 +382,9 @@ def results_section(model_result, data_result, task_type):
         if model_result["scores"] is not None:
             fig = plot_outlier_scores(
                 model_result["scores"],
-                y_true=model_result["y_true"].values if model_result["y_true"] is not None else None,
+                y_true=model_result["y_true"].values
+                if model_result["y_true"] is not None
+                else None,
             )
             st.pyplot(fig)
 
@@ -399,10 +406,13 @@ def results_section(model_result, data_result, task_type):
 
         # Create a simple pipeline for code generation
         from sklearn.pipeline import Pipeline as SKPipeline
-        simple_pipeline = SKPipeline([
-            ("preprocessing", model_result["preprocessing"]),
-            ("estimator", model_result["estimator"]),
-        ])
+
+        simple_pipeline = SKPipeline(
+            [
+                ("preprocessing", model_result["preprocessing"]),
+                ("estimator", model_result["estimator"]),
+            ]
+        )
 
         code = generate_code_snippet(
             simple_pipeline,

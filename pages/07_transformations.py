@@ -7,9 +7,9 @@ This page covers:
 - Imputation
 """
 
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="Dataset Transformations", page_icon="🔄", layout="wide")
 
@@ -21,7 +21,7 @@ def main():
     st.title("🔄 Dataset Transformations")
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     st.markdown("""
     Transform raw data into features suitable for machine learning.
@@ -67,7 +67,8 @@ def pipelines_section():
 
     st.subheader("Basic Pipeline")
 
-    st.code("""
+    st.code(
+        """
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -85,7 +86,9 @@ predictions = pipe.predict(X_test)
 # Access individual steps
 pipe.named_steps["scaler"]
 pipe.named_steps["classifier"]
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("ColumnTransformer")
 
@@ -93,7 +96,8 @@ pipe.named_steps["classifier"]
     Apply different transformations to different column types:
     """)
 
-    st.code("""
+    st.code(
+        """
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -125,18 +129,20 @@ full_pipe = Pipeline([
     ("preprocessor", preprocessor),
     ("classifier", LogisticRegression()),
 ])
-    """, language="python")
+    """,
+        language="python",
+    )
 
     # Interactive demo
     st.subheader("Interactive Demo")
 
     if st.button("Run Pipeline Demo", key="pipe_demo"):
-        from sklearn.pipeline import Pipeline
         from sklearn.compose import ColumnTransformer
-        from sklearn.preprocessing import StandardScaler, OneHotEncoder
-        from sklearn.impute import SimpleImputer
         from sklearn.ensemble import RandomForestClassifier
+        from sklearn.impute import SimpleImputer
         from sklearn.model_selection import train_test_split
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
         data = get_dataset("retail_demand")
         X, y = data.X, data.y
@@ -150,25 +156,33 @@ full_pipe = Pipeline([
         st.write("**Numeric features:**", numeric_features)
         st.write("**Categorical features:**", categorical_features)
 
-        numeric_transformer = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-        ])
+        numeric_transformer = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+            ]
+        )
 
-        categorical_transformer = Pipeline([
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-        ])
+        categorical_transformer = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            ]
+        )
 
-        preprocessor = ColumnTransformer([
-            ("num", numeric_transformer, numeric_features),
-            ("cat", categorical_transformer, categorical_features),
-        ])
+        preprocessor = ColumnTransformer(
+            [
+                ("num", numeric_transformer, numeric_features),
+                ("cat", categorical_transformer, categorical_features),
+            ]
+        )
 
-        full_pipe = Pipeline([
-            ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(n_estimators=50, random_state=42)),
-        ])
+        full_pipe = Pipeline(
+            [
+                ("preprocessor", preprocessor),
+                ("classifier", RandomForestClassifier(n_estimators=50, random_state=42)),
+            ]
+        )
 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y_class, test_size=0.2, random_state=42
@@ -194,11 +208,36 @@ def preprocessing_section():
     """)
 
     scalers_data = [
-        {"Scaler": "StandardScaler", "Formula": "(x - mean) / std", "Range": "~(-3, 3)", "Use When": "Normal distribution, most algorithms"},
-        {"Scaler": "MinMaxScaler", "Formula": "(x - min) / (max - min)", "Range": "[0, 1]", "Use When": "Need bounded values, neural networks"},
-        {"Scaler": "RobustScaler", "Formula": "(x - median) / IQR", "Range": "Varies", "Use When": "Data has outliers"},
-        {"Scaler": "MaxAbsScaler", "Formula": "x / max(|x|)", "Range": "[-1, 1]", "Use When": "Sparse data, preserve zeros"},
-        {"Scaler": "Normalizer", "Formula": "x / ||x||", "Range": "Unit norm", "Use When": "Text, TF-IDF vectors"},
+        {
+            "Scaler": "StandardScaler",
+            "Formula": "(x - mean) / std",
+            "Range": "~(-3, 3)",
+            "Use When": "Normal distribution, most algorithms",
+        },
+        {
+            "Scaler": "MinMaxScaler",
+            "Formula": "(x - min) / (max - min)",
+            "Range": "[0, 1]",
+            "Use When": "Need bounded values, neural networks",
+        },
+        {
+            "Scaler": "RobustScaler",
+            "Formula": "(x - median) / IQR",
+            "Range": "Varies",
+            "Use When": "Data has outliers",
+        },
+        {
+            "Scaler": "MaxAbsScaler",
+            "Formula": "x / max(|x|)",
+            "Range": "[-1, 1]",
+            "Use When": "Sparse data, preserve zeros",
+        },
+        {
+            "Scaler": "Normalizer",
+            "Formula": "x / ||x||",
+            "Range": "Unit norm",
+            "Use When": "Text, TF-IDF vectors",
+        },
     ]
 
     st.dataframe(pd.DataFrame(scalers_data), hide_index=True, use_container_width=True)
@@ -210,15 +249,13 @@ def preprocessing_section():
 
     with col1:
         scaler_choice = st.selectbox(
-            "Scaler",
-            ["StandardScaler", "MinMaxScaler", "RobustScaler"],
-            key="scaler_choice"
+            "Scaler", ["StandardScaler", "MinMaxScaler", "RobustScaler"], key="scaler_choice"
         )
 
     with col2:
         if st.button("Apply Scaler", key="scaler_demo"):
             import matplotlib.pyplot as plt
-            from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+            from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
             data = get_dataset("california_housing")
             X = data.X
@@ -238,11 +275,11 @@ def preprocessing_section():
 
             fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
-            axes[0].hist(original, bins=50, edgecolor='black')
+            axes[0].hist(original, bins=50, edgecolor="black")
             axes[0].set_title(f"Original: {feature}")
             axes[0].set_xlabel("Value")
 
-            axes[1].hist(transformed, bins=50, edgecolor='black', color='orange')
+            axes[1].hist(transformed, bins=50, edgecolor="black", color="orange")
             axes[1].set_title(f"After {scaler_choice}")
             axes[1].set_xlabel("Value")
 
@@ -252,7 +289,9 @@ def preprocessing_section():
             with col1:
                 st.write(f"**Original:** mean={original.mean():.2f}, std={original.std():.2f}")
             with col2:
-                st.write(f"**Transformed:** mean={transformed.mean():.2f}, std={transformed.std():.2f}")
+                st.write(
+                    f"**Transformed:** mean={transformed.mean():.2f}, std={transformed.std():.2f}"
+                )
 
 
 def imputation_section():
@@ -264,17 +303,42 @@ def imputation_section():
     """)
 
     imputers_data = [
-        {"Method": "mean", "Description": "Replace with column mean", "When": "Numeric, normal distribution"},
-        {"Method": "median", "Description": "Replace with column median", "When": "Numeric, outliers present"},
-        {"Method": "most_frequent", "Description": "Replace with mode", "When": "Categorical or discrete numeric"},
-        {"Method": "constant", "Description": "Replace with fixed value", "When": "Need explicit missing indicator"},
-        {"Method": "KNNImputer", "Description": "Use k-nearest neighbors", "When": "Correlated features"},
-        {"Method": "IterativeImputer", "Description": "Multivariate imputation", "When": "Complex missing patterns"},
+        {
+            "Method": "mean",
+            "Description": "Replace with column mean",
+            "When": "Numeric, normal distribution",
+        },
+        {
+            "Method": "median",
+            "Description": "Replace with column median",
+            "When": "Numeric, outliers present",
+        },
+        {
+            "Method": "most_frequent",
+            "Description": "Replace with mode",
+            "When": "Categorical or discrete numeric",
+        },
+        {
+            "Method": "constant",
+            "Description": "Replace with fixed value",
+            "When": "Need explicit missing indicator",
+        },
+        {
+            "Method": "KNNImputer",
+            "Description": "Use k-nearest neighbors",
+            "When": "Correlated features",
+        },
+        {
+            "Method": "IterativeImputer",
+            "Description": "Multivariate imputation",
+            "When": "Complex missing patterns",
+        },
     ]
 
     st.dataframe(pd.DataFrame(imputers_data), hide_index=True, use_container_width=True)
 
-    st.code("""
+    st.code(
+        """
 from sklearn.impute import SimpleImputer, KNNImputer
 
 # Simple strategies
@@ -291,7 +355,9 @@ from sklearn.impute import IterativeImputer
 
 iter_imputer = IterativeImputer(max_iter=10, random_state=42)
 X_imputed = iter_imputer.fit_transform(X)
-    """, language="python")
+    """,
+        language="python",
+    )
 
 
 def encoding_section():
@@ -303,15 +369,28 @@ def encoding_section():
     """)
 
     encoders_data = [
-        {"Encoder": "OneHotEncoder", "Output": "Binary columns", "When": "Nominal categories, tree-based ok, linear models"},
-        {"Encoder": "OrdinalEncoder", "Output": "Integer codes", "When": "Ordinal categories with natural order"},
+        {
+            "Encoder": "OneHotEncoder",
+            "Output": "Binary columns",
+            "When": "Nominal categories, tree-based ok, linear models",
+        },
+        {
+            "Encoder": "OrdinalEncoder",
+            "Output": "Integer codes",
+            "When": "Ordinal categories with natural order",
+        },
         {"Encoder": "LabelEncoder", "Output": "Integer codes", "When": "Target variable only"},
-        {"Encoder": "TargetEncoder", "Output": "Target mean", "When": "High cardinality, prevent overfitting"},
+        {
+            "Encoder": "TargetEncoder",
+            "Output": "Target mean",
+            "When": "High cardinality, prevent overfitting",
+        },
     ]
 
     st.dataframe(pd.DataFrame(encoders_data), hide_index=True, use_container_width=True)
 
-    st.code("""
+    st.code(
+        """
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
 
 # One-hot encoding
@@ -328,7 +407,9 @@ X_encoded = oe.fit_transform(X[["priority"]])
 # Label encoding (for target)
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Interactive Demo")
 
@@ -336,20 +417,19 @@ y_encoded = le.fit_transform(y)
         from sklearn.preprocessing import OneHotEncoder
 
         # Create sample categorical data
-        sample = pd.DataFrame({
-            "color": ["red", "blue", "green", "red", "blue"],
-            "size": ["S", "M", "L", "M", "S"],
-        })
+        sample = pd.DataFrame(
+            {
+                "color": ["red", "blue", "green", "red", "blue"],
+                "size": ["S", "M", "L", "M", "S"],
+            }
+        )
 
         st.write("**Original Data:**")
         st.dataframe(sample)
 
         ohe = OneHotEncoder(sparse_output=False)
         encoded = ohe.fit_transform(sample)
-        encoded_df = pd.DataFrame(
-            encoded,
-            columns=ohe.get_feature_names_out(["color", "size"])
-        )
+        encoded_df = pd.DataFrame(encoded, columns=ohe.get_feature_names_out(["color", "size"]))
 
         st.write("**After One-Hot Encoding:**")
         st.dataframe(encoded_df)
@@ -367,7 +447,8 @@ def feature_extraction_section():
 
     st.subheader("Text Features")
 
-    st.code("""
+    st.code(
+        """
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 # Bag of words
@@ -377,11 +458,14 @@ X_counts = count_vec.fit_transform(documents)
 # TF-IDF (term frequency-inverse document frequency)
 tfidf_vec = TfidfVectorizer(max_features=1000, stop_words="english")
 X_tfidf = tfidf_vec.fit_transform(documents)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Dictionary Features")
 
-    st.code("""
+    st.code(
+        """
 from sklearn.feature_extraction import DictVectorizer
 
 # Convert list of dicts to feature matrix
@@ -390,12 +474,15 @@ X = vec.fit_transform([
     {"city": "NY", "temp": 20},
     {"city": "LA", "temp": 25},
 ])
-    """, language="python")
+    """,
+        language="python",
+    )
 
     if level in ("intermediate", "advanced"):
         st.subheader("Polynomial Features")
 
-        st.code("""
+        st.code(
+            """
 from sklearn.preprocessing import PolynomialFeatures
 
 # Create polynomial and interaction features
@@ -403,7 +490,9 @@ poly = PolynomialFeatures(degree=2, include_bias=False)
 X_poly = poly.fit_transform(X)
 
 # For [a, b], creates [a, b, a², ab, b²]
-        """, language="python")
+        """,
+            language="python",
+        )
 
 
 if __name__ == "__main__":

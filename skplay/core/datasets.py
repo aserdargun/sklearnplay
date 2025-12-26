@@ -4,12 +4,13 @@ Provides a unified interface for loading toy datasets and sklearn built-in datas
 Each dataset includes metadata: task type, feature info, description, and domain tags.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Literal, Callable
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 from sklearn import datasets as sklearn_datasets
-
 
 TaskType = Literal["classification", "regression", "clustering", "outlier_detection"]
 Domain = Literal["general", "power", "retail", "finance", "healthcare"]
@@ -18,6 +19,7 @@ Domain = Literal["general", "power", "retail", "finance", "healthcare"]
 @dataclass
 class FeatureInfo:
     """Information about a single feature."""
+
     name: str
     dtype: Literal["numeric", "categorical", "binary"]
     description: str = ""
@@ -27,6 +29,7 @@ class FeatureInfo:
 @dataclass
 class DatasetCard:
     """Metadata card for a dataset."""
+
     name: str
     description: str
     task_type: TaskType
@@ -43,6 +46,7 @@ class DatasetCard:
 @dataclass
 class DatasetResult:
     """Result from loading a dataset."""
+
     X: pd.DataFrame
     y: pd.Series | None
     card: DatasetCard
@@ -92,28 +96,28 @@ class DatasetRegistry:
     @classmethod
     def get_domains(cls) -> list[Domain]:
         """Get all unique domains."""
-        return list(set(card.domain for card in cls._cards.values()))
+        return list({card.domain for card in cls._cards.values()})
 
     @classmethod
     def get_task_types(cls) -> list[TaskType]:
         """Get all unique task types."""
-        return list(set(card.task_type for card in cls._cards.values()))
+        return list({card.task_type for card in cls._cards.values()})
 
 
 # =============================================================================
 # GENERAL DOMAIN: sklearn built-in datasets
 # =============================================================================
 
+
 def _load_iris() -> DatasetResult:
     """Load iris dataset."""
     data = sklearn_datasets.load_iris(as_frame=True)
     X = data.data
-    y = data.target.map({i: name for i, name in enumerate(data.target_names)})
+    y = data.target.map(dict(enumerate(data.target_names)))
     y.name = "species"
 
     features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Iris {col}")
-        for col in X.columns
+        FeatureInfo(name=col, dtype="numeric", description=f"Iris {col}") for col in X.columns
     ]
 
     card = DatasetCard(
@@ -141,8 +145,7 @@ def _load_wine() -> DatasetResult:
     y.name = "wine_class"
 
     features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Wine {col}")
-        for col in X.columns
+        FeatureInfo(name=col, dtype="numeric", description=f"Wine {col}") for col in X.columns
     ]
 
     card = DatasetCard(
@@ -170,8 +173,7 @@ def _load_breast_cancer() -> DatasetResult:
     y.name = "diagnosis"
 
     features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Tumor {col}")
-        for col in X.columns
+        FeatureInfo(name=col, dtype="numeric", description=f"Tumor {col}") for col in X.columns
     ]
 
     card = DatasetCard(
@@ -199,8 +201,7 @@ def _load_diabetes() -> DatasetResult:
     y.name = "progression"
 
     features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Diabetes {col}")
-        for col in X.columns
+        FeatureInfo(name=col, dtype="numeric", description=f"Diabetes {col}") for col in X.columns
     ]
 
     card = DatasetCard(
@@ -228,8 +229,7 @@ def _load_california_housing() -> DatasetResult:
     y.name = "median_house_value"
 
     features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Housing {col}")
-        for col in X.columns
+        FeatureInfo(name=col, dtype="numeric", description=f"Housing {col}") for col in X.columns
     ]
 
     card = DatasetCard(
@@ -257,8 +257,7 @@ def _load_digits() -> DatasetResult:
     y.name = "digit"
 
     features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Pixel {col}")
-        for col in X.columns
+        FeatureInfo(name=col, dtype="numeric", description=f"Pixel {col}") for col in X.columns
     ]
 
     card = DatasetCard(
@@ -282,6 +281,7 @@ def _load_digits() -> DatasetResult:
 # POWER INDUSTRY DOMAIN
 # =============================================================================
 
+
 def _load_power_failure() -> DatasetResult:
     """Synthetic power equipment failure prediction dataset."""
     np.random.seed(42)
@@ -297,24 +297,26 @@ def _load_power_failure() -> DatasetResult:
 
     # Create failure probability based on features
     failure_prob = (
-        0.1 * (temperature > 100).astype(float) +
-        0.2 * (vibration > 4).astype(float) +
-        0.15 * (pressure < 80).astype(float) +
-        0.1 * (load_pct > 90).astype(float) +
-        0.1 * (age_years > 15).astype(float) +
-        0.15 * (maintenance_days > 180).astype(float) +
-        np.random.uniform(0, 0.2, n_samples)
+        0.1 * (temperature > 100).astype(float)
+        + 0.2 * (vibration > 4).astype(float)
+        + 0.15 * (pressure < 80).astype(float)
+        + 0.1 * (load_pct > 90).astype(float)
+        + 0.1 * (age_years > 15).astype(float)
+        + 0.15 * (maintenance_days > 180).astype(float)
+        + np.random.uniform(0, 0.2, n_samples)
     )
     failure = (failure_prob > 0.4).astype(int)
 
-    X = pd.DataFrame({
-        "temperature_c": temperature,
-        "vibration_mm_s": vibration,
-        "pressure_psi": pressure,
-        "load_percent": load_pct,
-        "equipment_age_years": age_years,
-        "days_since_maintenance": maintenance_days,
-    })
+    X = pd.DataFrame(
+        {
+            "temperature_c": temperature,
+            "vibration_mm_s": vibration,
+            "pressure_psi": pressure,
+            "load_percent": load_pct,
+            "equipment_age_years": age_years,
+            "days_since_maintenance": maintenance_days,
+        }
+    )
     y = pd.Series(failure, name="failure").map({0: "normal", 1: "failure"})
 
     features = [
@@ -356,22 +358,24 @@ def _load_power_efficiency() -> DatasetResult:
 
     # Heat rate depends on these factors (lower is better)
     heat_rate = (
-        8000 +
-        50 * (ambient_temp - 20) +
-        10 * (humidity_pct - 50) -
-        2000 * (fuel_quality - 0.9) -
-        5 * (load_mw - 300) -
-        1000 * (cooling_efficiency - 0.85) +
-        np.random.normal(0, 100, n_samples)
+        8000
+        + 50 * (ambient_temp - 20)
+        + 10 * (humidity_pct - 50)
+        - 2000 * (fuel_quality - 0.9)
+        - 5 * (load_mw - 300)
+        - 1000 * (cooling_efficiency - 0.85)
+        + np.random.normal(0, 100, n_samples)
     )
 
-    X = pd.DataFrame({
-        "ambient_temp_c": ambient_temp,
-        "humidity_percent": humidity_pct,
-        "fuel_quality_index": fuel_quality,
-        "load_mw": load_mw,
-        "cooling_efficiency": cooling_efficiency,
-    })
+    X = pd.DataFrame(
+        {
+            "ambient_temp_c": ambient_temp,
+            "humidity_percent": humidity_pct,
+            "fuel_quality_index": fuel_quality,
+            "load_mw": load_mw,
+            "cooling_efficiency": cooling_efficiency,
+        }
+    )
     y = pd.Series(heat_rate, name="heat_rate_btu_kwh")
 
     features = [
@@ -403,6 +407,7 @@ def _load_power_efficiency() -> DatasetResult:
 # RETAIL DOMAIN
 # =============================================================================
 
+
 def _load_retail_churn() -> DatasetResult:
     """Synthetic customer churn classification dataset."""
     np.random.seed(44)
@@ -417,23 +422,25 @@ def _load_retail_churn() -> DatasetResult:
 
     # Churn probability
     churn_prob = (
-        0.3 * (recency_days > 90).astype(float) +
-        0.2 * (frequency < 3).astype(float) +
-        0.1 * (monetary < 100).astype(float) +
-        0.15 * (tenure_months < 6).astype(float) +
-        0.1 * (support_tickets > 2).astype(float) +
-        0.15 * (satisfaction_score < 2.5).astype(float)
+        0.3 * (recency_days > 90).astype(float)
+        + 0.2 * (frequency < 3).astype(float)
+        + 0.1 * (monetary < 100).astype(float)
+        + 0.15 * (tenure_months < 6).astype(float)
+        + 0.1 * (support_tickets > 2).astype(float)
+        + 0.15 * (satisfaction_score < 2.5).astype(float)
     )
     churned = (churn_prob + np.random.uniform(0, 0.3, n_samples) > 0.5).astype(int)
 
-    X = pd.DataFrame({
-        "recency_days": recency_days,
-        "purchase_frequency": frequency,
-        "monetary_value": monetary,
-        "tenure_months": tenure_months,
-        "support_tickets": support_tickets,
-        "satisfaction_score": satisfaction_score,
-    })
+    X = pd.DataFrame(
+        {
+            "recency_days": recency_days,
+            "purchase_frequency": frequency,
+            "monetary_value": monetary,
+            "tenure_months": tenure_months,
+            "support_tickets": support_tickets,
+            "satisfaction_score": satisfaction_score,
+        }
+    )
     y = pd.Series(churned, name="churned").map({0: "retained", 1: "churned"})
 
     features = [
@@ -478,27 +485,29 @@ def _load_retail_demand() -> DatasetResult:
     # Demand model
     season_effect = {"spring": 1.0, "summer": 1.2, "fall": 0.9, "winter": 1.1}
     demand = (
-        100 -
-        0.5 * base_price +
-        2 * discount_pct +
-        20 * is_weekend +
-        30 * is_holiday +
-        0.3 * (competitor_price - base_price) +
-        0.02 * advertising_spend +
-        np.array([season_effect[s] for s in season]) * 10 +
-        np.random.normal(0, 10, n_samples)
+        100
+        - 0.5 * base_price
+        + 2 * discount_pct
+        + 20 * is_weekend
+        + 30 * is_holiday
+        + 0.3 * (competitor_price - base_price)
+        + 0.02 * advertising_spend
+        + np.array([season_effect[s] for s in season]) * 10
+        + np.random.normal(0, 10, n_samples)
     )
     demand = np.maximum(demand, 0)
 
-    X = pd.DataFrame({
-        "base_price": base_price,
-        "discount_percent": discount_pct,
-        "is_weekend": is_weekend,
-        "is_holiday": is_holiday,
-        "competitor_price": competitor_price,
-        "advertising_spend": advertising_spend,
-        "season": season,
-    })
+    X = pd.DataFrame(
+        {
+            "base_price": base_price,
+            "discount_percent": discount_pct,
+            "is_weekend": is_weekend,
+            "is_holiday": is_holiday,
+            "competitor_price": competitor_price,
+            "advertising_spend": advertising_spend,
+            "season": season,
+        }
+    )
     y = pd.Series(demand, name="units_sold")
 
     features = [
@@ -508,7 +517,9 @@ def _load_retail_demand() -> DatasetResult:
         FeatureInfo("is_holiday", "binary", "Whether sale is on holiday"),
         FeatureInfo("competitor_price", "numeric", "Competitor price for similar product"),
         FeatureInfo("advertising_spend", "numeric", "Weekly advertising spend in dollars"),
-        FeatureInfo("season", "categorical", "Season of the year", ["spring", "summer", "fall", "winter"]),
+        FeatureInfo(
+            "season", "categorical", "Season of the year", ["spring", "summer", "fall", "winter"]
+        ),
     ]
 
     card = DatasetCard(
@@ -540,14 +551,16 @@ def _load_retail_segmentation() -> DatasetResult:
     categories_purchased = np.random.poisson(3, n_samples) + 1
     online_ratio = np.random.beta(2, 2, n_samples)
 
-    X = pd.DataFrame({
-        "recency_days": recency,
-        "frequency": frequency,
-        "monetary_total": monetary,
-        "avg_basket_size": avg_basket_size,
-        "categories_purchased": categories_purchased,
-        "online_purchase_ratio": online_ratio,
-    })
+    X = pd.DataFrame(
+        {
+            "recency_days": recency,
+            "frequency": frequency,
+            "monetary_total": monetary,
+            "avg_basket_size": avg_basket_size,
+            "categories_purchased": categories_purchased,
+            "online_purchase_ratio": online_ratio,
+        }
+    )
 
     features = [
         FeatureInfo("recency_days", "numeric", "Days since last purchase"),
@@ -579,6 +592,7 @@ def _load_retail_segmentation() -> DatasetResult:
 # FINANCE DOMAIN
 # =============================================================================
 
+
 def _load_credit_risk() -> DatasetResult:
     """Synthetic credit risk classification dataset."""
     np.random.seed(47)
@@ -595,25 +609,27 @@ def _load_credit_risk() -> DatasetResult:
 
     # Default probability
     default_prob = (
-        0.15 * (debt_to_income > 0.4).astype(float) +
-        0.2 * (credit_utilization > 0.7).astype(float) +
-        0.25 * (delinquencies_2yr > 0).astype(float) +
-        0.1 * (credit_age_years < 2).astype(float) +
-        0.1 * (employment_length < 1).astype(float) +
-        0.1 * (loan_amount / income > 0.5).astype(float)
+        0.15 * (debt_to_income > 0.4).astype(float)
+        + 0.2 * (credit_utilization > 0.7).astype(float)
+        + 0.25 * (delinquencies_2yr > 0).astype(float)
+        + 0.1 * (credit_age_years < 2).astype(float)
+        + 0.1 * (employment_length < 1).astype(float)
+        + 0.1 * (loan_amount / income > 0.5).astype(float)
     )
     default = (default_prob + np.random.uniform(0, 0.2, n_samples) > 0.4).astype(int)
 
-    X = pd.DataFrame({
-        "annual_income": income,
-        "debt_to_income_ratio": debt_to_income,
-        "credit_utilization": credit_utilization,
-        "num_credit_accounts": num_accounts,
-        "delinquencies_2yr": delinquencies_2yr,
-        "credit_history_years": credit_age_years,
-        "employment_length_years": employment_length,
-        "loan_amount": loan_amount,
-    })
+    X = pd.DataFrame(
+        {
+            "annual_income": income,
+            "debt_to_income_ratio": debt_to_income,
+            "credit_utilization": credit_utilization,
+            "num_credit_accounts": num_accounts,
+            "delinquencies_2yr": delinquencies_2yr,
+            "credit_history_years": credit_age_years,
+            "employment_length_years": employment_length,
+            "loan_amount": loan_amount,
+        }
+    )
     y = pd.Series(default, name="default").map({0: "no_default", 1: "default"})
 
     features = [
@@ -665,16 +681,15 @@ def _load_fraud_detection() -> DatasetResult:
     fraud_distance = np.random.exponential(100, n_fraud)
     fraud_velocity = np.random.uniform(0.5, 1.0, n_fraud)
 
-    X = pd.DataFrame({
-        "amount": np.concatenate([normal_amount, fraud_amount]),
-        "hour_of_day": np.concatenate([normal_hour, fraud_hour]),
-        "distance_from_home": np.concatenate([normal_distance, fraud_distance]),
-        "velocity_kmh": np.concatenate([normal_velocity, fraud_velocity]),
-    })
-    y = pd.Series(
-        [0] * n_normal + [1] * n_fraud,
-        name="is_fraud"
-    ).map({0: "normal", 1: "fraud"})
+    X = pd.DataFrame(
+        {
+            "amount": np.concatenate([normal_amount, fraud_amount]),
+            "hour_of_day": np.concatenate([normal_hour, fraud_hour]),
+            "distance_from_home": np.concatenate([normal_distance, fraud_distance]),
+            "velocity_kmh": np.concatenate([normal_velocity, fraud_velocity]),
+        }
+    )
+    y = pd.Series([0] * n_normal + [1] * n_fraud, name="is_fraud").map({0: "normal", 1: "fraud"})
 
     # Shuffle
     idx = np.random.permutation(n_samples)
@@ -709,6 +724,7 @@ def _load_fraud_detection() -> DatasetResult:
 # Register all datasets
 # =============================================================================
 
+
 def _register_all_datasets():
     """Register all built-in datasets."""
     # General domain (sklearn built-ins)
@@ -716,17 +732,23 @@ def _register_all_datasets():
     DatasetRegistry.register("wine", _load_wine, _load_wine().card)
     DatasetRegistry.register("breast_cancer", _load_breast_cancer, _load_breast_cancer().card)
     DatasetRegistry.register("diabetes", _load_diabetes, _load_diabetes().card)
-    DatasetRegistry.register("california_housing", _load_california_housing, _load_california_housing().card)
+    DatasetRegistry.register(
+        "california_housing", _load_california_housing, _load_california_housing().card
+    )
     DatasetRegistry.register("digits", _load_digits, _load_digits().card)
 
     # Power domain
     DatasetRegistry.register("power_failure", _load_power_failure, _load_power_failure().card)
-    DatasetRegistry.register("power_efficiency", _load_power_efficiency, _load_power_efficiency().card)
+    DatasetRegistry.register(
+        "power_efficiency", _load_power_efficiency, _load_power_efficiency().card
+    )
 
     # Retail domain
     DatasetRegistry.register("retail_churn", _load_retail_churn, _load_retail_churn().card)
     DatasetRegistry.register("retail_demand", _load_retail_demand, _load_retail_demand().card)
-    DatasetRegistry.register("retail_segmentation", _load_retail_segmentation, _load_retail_segmentation().card)
+    DatasetRegistry.register(
+        "retail_segmentation", _load_retail_segmentation, _load_retail_segmentation().card
+    )
 
     # Finance domain
     DatasetRegistry.register("credit_risk", _load_credit_risk, _load_credit_risk().card)

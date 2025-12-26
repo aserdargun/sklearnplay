@@ -4,6 +4,7 @@ Provides grid search, random search, and successive halving helpers.
 """
 
 from typing import Any, Literal
+
 import numpy as np
 from sklearn.model_selection import (
     GridSearchCV,
@@ -13,6 +14,7 @@ from sklearn.model_selection import (
 
 try:
     from sklearn.model_selection import HalvingGridSearchCV, HalvingRandomSearchCV
+
     HALVING_AVAILABLE = True
 except ImportError:
     HALVING_AVAILABLE = False
@@ -21,7 +23,6 @@ from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
 
 from skplay.core.datasets import TaskType
-
 
 # Parameter grids for common estimators
 PARAM_GRIDS = {
@@ -179,7 +180,9 @@ def get_param_grid(
         Parameter grid dictionary
     """
     if estimator_name in PARAM_GRIDS:
-        return PARAM_GRIDS[estimator_name].get(level, {})
+        level_grids = PARAM_GRIDS[estimator_name]
+        if isinstance(level_grids, dict):
+            return level_grids.get(level, {})
     return {}
 
 
@@ -311,10 +314,7 @@ def run_halving_search(
         Fitted search object or raises ImportError if not available
     """
     if not HALVING_AVAILABLE:
-        raise ImportError(
-            "Successive halving not available. "
-            "Upgrade to scikit-learn >= 1.0."
-        )
+        raise ImportError("Successive halving not available. Upgrade to scikit-learn >= 1.0.")
 
     if use_random:
         search = HalvingRandomSearchCV(
@@ -430,6 +430,7 @@ def suggest_param_ranges(
 
     # Get default params for estimator
     from skplay.core.estimators import get_estimator_class
+
     est_class = get_estimator_class(task_type, estimator_name)
 
     if not est_class:

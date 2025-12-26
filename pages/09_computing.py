@@ -3,8 +3,8 @@
 This page covers performance, parallelism, and computational aspects.
 """
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="Computing", page_icon="⚡", layout="wide")
 
@@ -15,7 +15,7 @@ def main():
     st.title("⚡ Computing with scikit-learn")
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     st.markdown("""
     Optimize performance and scale to larger datasets.
@@ -52,7 +52,8 @@ def parallelism_section():
 
     st.subheader("Using n_jobs")
 
-    st.code("""
+    st.code(
+        """
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 
@@ -64,7 +65,9 @@ model = RandomForestClassifier(n_jobs=4)
 
 # Cross-validation in parallel
 scores = cross_val_score(model, X, y, cv=5, n_jobs=-1)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Common n_jobs Values")
 
@@ -82,7 +85,8 @@ scores = cross_val_score(model, X, y, cv=5, n_jobs=-1)
     level = get_level()
 
     if level in ("intermediate", "advanced"):
-        st.code("""
+        st.code(
+            """
 import joblib
 
 # Use threading backend (for I/O bound tasks)
@@ -92,7 +96,9 @@ with joblib.parallel_backend('threading'):
 # Use loky backend (default, for CPU bound tasks)
 with joblib.parallel_backend('loky'):
     model.fit(X, y)
-        """, language="python")
+        """,
+            language="python",
+        )
 
     st.warning("""
     **Note:** Parallelism has overhead. For small datasets, sequential may be faster.
@@ -110,7 +116,8 @@ def memory_section():
 
     st.subheader("Sparse Matrices")
 
-    st.code("""
+    st.code(
+        """
 from scipy.sparse import csr_matrix
 
 # Many sklearn estimators work with sparse matrices
@@ -119,7 +126,9 @@ X_sparse = csr_matrix(X)  # Convert dense to sparse
 # Check if estimator supports sparse
 from sklearn.utils.estimator_checks import check_estimator
 # Or check documentation
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Incremental Learning")
 
@@ -127,7 +136,8 @@ from sklearn.utils.estimator_checks import check_estimator
     Some estimators support `partial_fit` for streaming/batch learning:
     """)
 
-    st.code("""
+    st.code(
+        """
 from sklearn.linear_model import SGDClassifier
 
 model = SGDClassifier()
@@ -135,12 +145,17 @@ model = SGDClassifier()
 # Fit in batches
 for X_batch, y_batch in data_generator:
     model.partial_fit(X_batch, y_batch, classes=all_classes)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Estimators with partial_fit")
 
     estimators_data = [
-        {"Category": "Classification", "Estimators": "SGDClassifier, MultinomialNB, BernoulliNB, Perceptron"},
+        {
+            "Category": "Classification",
+            "Estimators": "SGDClassifier, MultinomialNB, BernoulliNB, Perceptron",
+        },
         {"Category": "Regression", "Estimators": "SGDRegressor"},
         {"Category": "Clustering", "Estimators": "MiniBatchKMeans, Birch"},
         {"Category": "Decomposition", "Estimators": "IncrementalPCA, MiniBatchDictionaryLearning"},
@@ -154,7 +169,10 @@ def performance_section():
     st.header("Performance Tips")
 
     tips = [
-        ("Use appropriate data types", "float32 instead of float64 can halve memory and improve speed"),
+        (
+            "Use appropriate data types",
+            "float32 instead of float64 can halve memory and improve speed",
+        ),
         ("Scale features", "Many algorithms converge faster with scaled data"),
         ("Use sparse matrices", "For high-dimensional sparse data (e.g., text)"),
         ("Enable n_jobs", "Use all cores for parallelizable operations"),
@@ -172,7 +190,11 @@ def performance_section():
     complexity_data = [
         {"Algorithm": "Linear Models", "Training": "O(n × d)", "Prediction": "O(d)"},
         {"Algorithm": "Decision Trees", "Training": "O(n × d × log n)", "Prediction": "O(log n)"},
-        {"Algorithm": "Random Forest", "Training": "O(k × n × d × log n)", "Prediction": "O(k × log n)"},
+        {
+            "Algorithm": "Random Forest",
+            "Training": "O(k × n × d × log n)",
+            "Prediction": "O(k × log n)",
+        },
         {"Algorithm": "KNN", "Training": "O(1) or O(n)", "Prediction": "O(n × d)"},
         {"Algorithm": "SVM (RBF)", "Training": "O(n² ~ n³)", "Prediction": "O(n_sv × d)"},
         {"Algorithm": "K-Means", "Training": "O(n × k × d × i)", "Prediction": "O(k × d)"},

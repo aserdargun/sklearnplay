@@ -7,20 +7,21 @@ This page covers:
 - Validation curves
 """
 
-import streamlit as st
-import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, cross_val_score, learning_curve, validation_curve
+import pandas as pd
+import streamlit as st
+from sklearn.model_selection import (
+    cross_val_score,
+    train_test_split,
+)
 
 st.set_page_config(page_title="Model Selection", page_icon="🎚️", layout="wide")
 
-from skplay.core.datasets import DatasetRegistry, get_dataset
-from skplay.core.preprocessing import PreprocessingBuilder, identify_column_types, encode_target
-from skplay.core.estimators import get_estimators_for_task, create_estimator
-from skplay.core.tuning import get_param_grid, run_grid_search, run_random_search, format_search_results, HALVING_AVAILABLE
+from skplay.core.datasets import get_dataset
+from skplay.core.estimators import create_estimator
 from skplay.core.evaluation import plot_learning_curve, plot_validation_curve
+from skplay.core.tuning import HALVING_AVAILABLE, format_search_results
 from skplay.ui.level import get_level, get_level_config, level_selector
-from skplay.ui.components import show_dataset_card, show_estimator_selector
 
 
 def main():
@@ -33,7 +34,7 @@ def main():
     """)
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     # Topic selection
     topic = st.radio(
@@ -94,6 +95,7 @@ def cross_validation_section():
 
                 # Encode target
                 from sklearn.preprocessing import LabelEncoder
+
                 le = LabelEncoder()
                 y_encoded = le.fit_transform(y)
 
@@ -101,13 +103,15 @@ def cross_validation_section():
                 estimator = create_estimator("classification", estimator_name)
 
                 # Run CV
-                from sklearn.preprocessing import StandardScaler
                 from sklearn.pipeline import Pipeline
+                from sklearn.preprocessing import StandardScaler
 
-                pipeline = Pipeline([
-                    ("scaler", StandardScaler()),
-                    ("estimator", estimator),
-                ])
+                pipeline = Pipeline(
+                    [
+                        ("scaler", StandardScaler()),
+                        ("estimator", estimator),
+                    ]
+                )
 
                 scores = cross_val_score(pipeline, X, y_encoded, cv=n_folds, scoring="accuracy")
 
@@ -118,17 +122,22 @@ def cross_validation_section():
                 st.metric("Std Deviation", f"{scores.std():.4f}")
 
                 # Show fold-by-fold
-                fold_df = pd.DataFrame({
-                    "Fold": range(1, n_folds + 1),
-                    "Accuracy": scores,
-                })
+                fold_df = pd.DataFrame(
+                    {
+                        "Fold": range(1, n_folds + 1),
+                        "Accuracy": scores,
+                    }
+                )
                 st.dataframe(fold_df, hide_index=True)
 
                 # Visualization
                 import matplotlib.pyplot as plt
+
                 fig, ax = plt.subplots(figsize=(8, 4))
                 ax.bar(range(1, n_folds + 1), scores)
-                ax.axhline(y=scores.mean(), color='r', linestyle='--', label=f'Mean: {scores.mean():.3f}')
+                ax.axhline(
+                    y=scores.mean(), color="r", linestyle="--", label=f"Mean: {scores.mean():.3f}"
+                )
                 ax.set_xlabel("Fold")
                 ax.set_ylabel("Accuracy")
                 ax.set_title("Cross-Validation Scores")
@@ -173,7 +182,6 @@ def hyperparameter_tuning_section():
     """Hyperparameter tuning demonstration."""
     st.header("Hyperparameter Tuning")
 
-    level = get_level()
     config = get_level_config()
 
     st.markdown("""
@@ -224,7 +232,8 @@ def hyperparameter_tuning_section():
 
         search_method = st.selectbox(
             "Search Method",
-            options=["grid_search", "random_search"] + (["halving_search"] if HALVING_AVAILABLE and config["show_halving_search"] else []),
+            options=["grid_search", "random_search"]
+            + (["halving_search"] if HALVING_AVAILABLE and config["show_halving_search"] else []),
             format_func=lambda x: x.replace("_", " ").title(),
             key="tune_method",
         )
@@ -248,6 +257,7 @@ def hyperparameter_tuning_section():
                 X, y = data.X, data.y
 
                 from sklearn.preprocessing import LabelEncoder
+
                 le = LabelEncoder()
                 y_encoded = le.fit_transform(y)
 
@@ -256,14 +266,16 @@ def hyperparameter_tuning_section():
                 )
 
                 # Create pipeline
-                from sklearn.preprocessing import StandardScaler
-                from sklearn.pipeline import Pipeline
                 from sklearn.ensemble import RandomForestClassifier
+                from sklearn.pipeline import Pipeline
+                from sklearn.preprocessing import StandardScaler
 
-                pipeline = Pipeline([
-                    ("scaler", StandardScaler()),
-                    ("clf", RandomForestClassifier(random_state=42)),
-                ])
+                pipeline = Pipeline(
+                    [
+                        ("scaler", StandardScaler()),
+                        ("clf", RandomForestClassifier(random_state=42)),
+                    ]
+                )
 
                 # Parameter grid
                 param_grid = {
@@ -275,14 +287,21 @@ def hyperparameter_tuning_section():
                 # Run search
                 if search_method == "grid_search":
                     from sklearn.model_selection import GridSearchCV
+
                     search = GridSearchCV(
                         pipeline, param_grid, cv=cv_folds, scoring="accuracy", n_jobs=-1
                     )
                 else:
                     from sklearn.model_selection import RandomizedSearchCV
+
                     search = RandomizedSearchCV(
-                        pipeline, param_grid, n_iter=12, cv=cv_folds,
-                        scoring="accuracy", n_jobs=-1, random_state=42
+                        pipeline,
+                        param_grid,
+                        n_iter=12,
+                        cv=cv_folds,
+                        scoring="accuracy",
+                        n_jobs=-1,
+                        random_state=42,
                     )
 
                 search.fit(X_train, y_train)
@@ -298,19 +317,22 @@ def hyperparameter_tuning_section():
 
                 # Top results
                 results = format_search_results(search, top_n=5)
-                results_df = pd.DataFrame([
-                    {
-                        "Rank": r["rank"],
-                        "Mean Score": f"{r['mean_test_score']:.4f}",
-                        "Std": f"{r['std_test_score']:.4f}",
-                        **{k.replace("clf__", ""): v for k, v in r["params"].items()}
-                    }
-                    for r in results
-                ])
+                results_df = pd.DataFrame(
+                    [
+                        {
+                            "Rank": r["rank"],
+                            "Mean Score": f"{r['mean_test_score']:.4f}",
+                            "Std": f"{r['std_test_score']:.4f}",
+                            **{k.replace("clf__", ""): v for k, v in r["params"].items()},
+                        }
+                        for r in results
+                    ]
+                )
                 st.dataframe(results_df, hide_index=True)
 
     with st.expander("Code Example"):
-        st.code("""
+        st.code(
+            """
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 
@@ -334,7 +356,9 @@ grid_search.fit(X_train, y_train)
 
 print(f"Best params: {grid_search.best_params_}")
 print(f"Best score: {grid_search.best_score_:.4f}")
-        """, language="python")
+        """,
+            language="python",
+        )
 
 
 def learning_curves_section():
@@ -370,7 +394,9 @@ def learning_curves_section():
 
         with col1:
             dataset = st.selectbox("Dataset", ["iris", "breast_cancer"], key="lc_data")
-            estimator = st.selectbox("Model", ["Random Forest", "Logistic Regression", "SVM (RBF Kernel)"], key="lc_est")
+            estimator = st.selectbox(
+                "Model", ["Random Forest", "Logistic Regression", "SVM (RBF Kernel)"], key="lc_est"
+            )
 
         with col2:
             if st.button("Generate Learning Curve", key="lc_run"):
@@ -378,17 +404,19 @@ def learning_curves_section():
                     data = get_dataset(dataset)
                     X, y = data.X, data.y
 
-                    from sklearn.preprocessing import LabelEncoder, StandardScaler
                     from sklearn.pipeline import Pipeline
+                    from sklearn.preprocessing import LabelEncoder, StandardScaler
 
                     le = LabelEncoder()
                     y_encoded = le.fit_transform(y)
 
                     est = create_estimator("classification", estimator)
-                    pipeline = Pipeline([
-                        ("scaler", StandardScaler()),
-                        ("estimator", est),
-                    ])
+                    pipeline = Pipeline(
+                        [
+                            ("scaler", StandardScaler()),
+                            ("estimator", est),
+                        ]
+                    )
 
                     fig = plot_learning_curve(pipeline, X, y_encoded, cv=5)
                     st.pyplot(fig)
@@ -417,17 +445,19 @@ def learning_curves_section():
                     data = get_dataset(dataset)
                     X, y = data.X, data.y
 
-                    from sklearn.preprocessing import LabelEncoder, StandardScaler
-                    from sklearn.pipeline import Pipeline
                     from sklearn.ensemble import RandomForestClassifier
+                    from sklearn.pipeline import Pipeline
+                    from sklearn.preprocessing import LabelEncoder, StandardScaler
 
                     le = LabelEncoder()
                     y_encoded = le.fit_transform(y)
 
-                    pipeline = Pipeline([
-                        ("scaler", StandardScaler()),
-                        ("clf", RandomForestClassifier(random_state=42)),
-                    ])
+                    pipeline = Pipeline(
+                        [
+                            ("scaler", StandardScaler()),
+                            ("clf", RandomForestClassifier(random_state=42)),
+                        ]
+                    )
 
                     if param_name == "n_estimators":
                         param_range = np.array([10, 25, 50, 100, 200, 500])
@@ -436,7 +466,9 @@ def learning_curves_section():
                         param_range = param_range[:-1].astype(int)  # Remove None for now
 
                     fig = plot_validation_curve(
-                        pipeline, X, y_encoded,
+                        pipeline,
+                        X,
+                        y_encoded,
                         param_name=f"clf__{param_name}",
                         param_range=param_range,
                         cv=5,
@@ -464,11 +496,36 @@ def metrics_section():
         st.markdown("### Classification Metrics")
 
         metrics_data = [
-            {"Metric": "Accuracy", "Formula": "(TP + TN) / Total", "Use When": "Classes are balanced", "Range": "0 to 1"},
-            {"Metric": "Precision", "Formula": "TP / (TP + FP)", "Use When": "False positives are costly", "Range": "0 to 1"},
-            {"Metric": "Recall", "Formula": "TP / (TP + FN)", "Use When": "False negatives are costly", "Range": "0 to 1"},
-            {"Metric": "F1 Score", "Formula": "2 * P * R / (P + R)", "Use When": "Balance P and R", "Range": "0 to 1"},
-            {"Metric": "ROC AUC", "Formula": "Area under ROC", "Use When": "Ranking matters", "Range": "0.5 to 1"},
+            {
+                "Metric": "Accuracy",
+                "Formula": "(TP + TN) / Total",
+                "Use When": "Classes are balanced",
+                "Range": "0 to 1",
+            },
+            {
+                "Metric": "Precision",
+                "Formula": "TP / (TP + FP)",
+                "Use When": "False positives are costly",
+                "Range": "0 to 1",
+            },
+            {
+                "Metric": "Recall",
+                "Formula": "TP / (TP + FN)",
+                "Use When": "False negatives are costly",
+                "Range": "0 to 1",
+            },
+            {
+                "Metric": "F1 Score",
+                "Formula": "2 * P * R / (P + R)",
+                "Use When": "Balance P and R",
+                "Range": "0 to 1",
+            },
+            {
+                "Metric": "ROC AUC",
+                "Formula": "Area under ROC",
+                "Use When": "Ranking matters",
+                "Range": "0.5 to 1",
+            },
         ]
 
         st.dataframe(pd.DataFrame(metrics_data), hide_index=True, use_container_width=True)
@@ -490,10 +547,30 @@ def metrics_section():
         st.markdown("### Regression Metrics")
 
         metrics_data = [
-            {"Metric": "R² Score", "Formula": "1 - SS_res/SS_tot", "Interpretation": "Variance explained (1 = perfect)", "Scale": "≤1"},
-            {"Metric": "MAE", "Formula": "mean(|y - ŷ|)", "Interpretation": "Average absolute error", "Scale": "Same as y"},
-            {"Metric": "RMSE", "Formula": "√mean((y - ŷ)²)", "Interpretation": "Standard deviation of errors", "Scale": "Same as y"},
-            {"Metric": "MAPE", "Formula": "mean(|y - ŷ|/|y|) × 100", "Interpretation": "Percentage error", "Scale": "%"},
+            {
+                "Metric": "R² Score",
+                "Formula": "1 - SS_res/SS_tot",
+                "Interpretation": "Variance explained (1 = perfect)",
+                "Scale": "≤1",
+            },
+            {
+                "Metric": "MAE",
+                "Formula": "mean(|y - ŷ|)",
+                "Interpretation": "Average absolute error",
+                "Scale": "Same as y",
+            },
+            {
+                "Metric": "RMSE",
+                "Formula": "√mean((y - ŷ)²)",
+                "Interpretation": "Standard deviation of errors",
+                "Scale": "Same as y",
+            },
+            {
+                "Metric": "MAPE",
+                "Formula": "mean(|y - ŷ|/|y|) × 100",
+                "Interpretation": "Percentage error",
+                "Scale": "%",
+            },
         ]
 
         st.dataframe(pd.DataFrame(metrics_data), hide_index=True, use_container_width=True)
@@ -511,7 +588,8 @@ def metrics_section():
         st.markdown("---")
         st.subheader("Using Scoring in sklearn")
 
-        st.code("""
+        st.code(
+            """
 # Available scoring strings
 from sklearn.metrics import get_scorer_names
 print(get_scorer_names())  # Lists all available scorers
@@ -528,7 +606,9 @@ cv_results = cross_validate(
     cv=5,
     return_train_score=True
 )
-        """, language="python")
+        """,
+            language="python",
+        )
 
 
 if __name__ == "__main__":

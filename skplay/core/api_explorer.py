@@ -3,16 +3,16 @@
 Provides tools to explore scikit-learn's API structure, signatures, and documentation.
 """
 
-from typing import Any, Literal
 import inspect
 import re
 from dataclasses import dataclass, field
+from typing import Any, Literal
 
-import sklearn
 from sklearn.utils import all_estimators
 
 try:
-    from sklearn.utils.discovery import all_displays, all_functions
+    from sklearn.utils.discovery import all_displays
+
     DISCOVERY_AVAILABLE = True
 except ImportError:
     DISCOVERY_AVAILABLE = False
@@ -21,6 +21,7 @@ except ImportError:
 @dataclass
 class APIEntry:
     """Represents an API entry (class or function)."""
+
     name: str
     module: str
     kind: Literal["class", "function", "display"]
@@ -48,7 +49,7 @@ def get_short_docstring(obj: Any, max_lines: int = 3) -> str:
         return ""
 
     lines = doc.split("\n")
-    short_lines = []
+    short_lines: list[str] = []
 
     for line in lines[:max_lines]:
         if line.strip() == "" and short_lines:
@@ -83,7 +84,7 @@ def get_parameter_info(obj: Any) -> list[dict]:
     Returns:
         List of parameter dictionaries
     """
-    params = []
+    params: list[dict[str, Any]] = []
 
     try:
         sig = inspect.signature(obj)
@@ -100,7 +101,9 @@ def get_parameter_info(obj: Any) -> list[dict]:
             "name": name,
             "kind": str(param.kind.name),
             "default": None if param.default is inspect.Parameter.empty else repr(param.default),
-            "annotation": str(param.annotation) if param.annotation is not inspect.Parameter.empty else None,
+            "annotation": str(param.annotation)
+            if param.annotation is not inspect.Parameter.empty
+            else None,
             "description": "",
         }
 
@@ -126,16 +129,16 @@ def get_estimator_type(estimator_class: type) -> str | None:
         Type string or None
     """
     if hasattr(estimator_class, "_estimator_type"):
-        return estimator_class._estimator_type
+        return str(estimator_class._estimator_type)
 
     # Check by inheritance
     try:
         from sklearn.base import (
             ClassifierMixin,
-            RegressorMixin,
             ClusterMixin,
-            TransformerMixin,
             OutlierMixin,
+            RegressorMixin,
+            TransformerMixin,
         )
 
         if issubclass(estimator_class, ClassifierMixin):
@@ -205,7 +208,9 @@ def get_tags_from_module(module_path: str) -> list[str]:
     return list(set(tags))
 
 
-def build_api_entry(name: str, obj: Any, module: str, kind: str) -> APIEntry:
+def build_api_entry(
+    name: str, obj: Any, module: str, kind: Literal["class", "function", "display"]
+) -> APIEntry:
     """Build an APIEntry from an object.
 
     Args:
@@ -286,20 +291,42 @@ class APIExplorer:
     def _add_common_functions(self) -> None:
         """Add commonly used functions to the registry."""
         common_functions = [
-            ("sklearn.model_selection", [
-                "train_test_split", "cross_val_score", "cross_validate",
-                "GridSearchCV", "RandomizedSearchCV",
-            ]),
-            ("sklearn.metrics", [
-                "accuracy_score", "precision_score", "recall_score", "f1_score",
-                "roc_auc_score", "confusion_matrix", "classification_report",
-                "mean_squared_error", "r2_score", "mean_absolute_error",
-                "silhouette_score",
-            ]),
-            ("sklearn.preprocessing", [
-                "StandardScaler", "MinMaxScaler", "LabelEncoder",
-                "OneHotEncoder", "OrdinalEncoder",
-            ]),
+            (
+                "sklearn.model_selection",
+                [
+                    "train_test_split",
+                    "cross_val_score",
+                    "cross_validate",
+                    "GridSearchCV",
+                    "RandomizedSearchCV",
+                ],
+            ),
+            (
+                "sklearn.metrics",
+                [
+                    "accuracy_score",
+                    "precision_score",
+                    "recall_score",
+                    "f1_score",
+                    "roc_auc_score",
+                    "confusion_matrix",
+                    "classification_report",
+                    "mean_squared_error",
+                    "r2_score",
+                    "mean_absolute_error",
+                    "silhouette_score",
+                ],
+            ),
+            (
+                "sklearn.preprocessing",
+                [
+                    "StandardScaler",
+                    "MinMaxScaler",
+                    "LabelEncoder",
+                    "OneHotEncoder",
+                    "OrdinalEncoder",
+                ],
+            ),
             ("sklearn.pipeline", ["Pipeline", "make_pipeline"]),
             ("sklearn.compose", ["ColumnTransformer", "make_column_transformer"]),
         ]
@@ -312,7 +339,9 @@ class APIExplorer:
                         continue
                     try:
                         obj = getattr(module, name)
-                        kind = "class" if inspect.isclass(obj) else "function"
+                        kind: Literal["class", "function", "display"] = (
+                            "class" if inspect.isclass(obj) else "function"
+                        )
                         entry = build_api_entry(name, obj, module_path, kind)
                         self._entries[name] = entry
                         self._index_entry(entry)
@@ -481,7 +510,7 @@ class APIExplorer:
         """
         self.load()
 
-        hierarchy = {}
+        hierarchy: dict[str, list[str]] = {}
 
         for module in self._by_module.keys():
             parts = module.split(".")

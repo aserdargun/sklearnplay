@@ -3,19 +3,19 @@
 Handles file upload, target selection, dtype detection and user overrides.
 """
 
-from typing import Literal
-import pandas as pd
-import numpy as np
 from io import StringIO
+from typing import Literal
 
-from skplay.core.datasets import DatasetResult, DatasetCard, FeatureInfo, TaskType
+import pandas as pd
+
+from skplay.core.datasets import DatasetCard, DatasetResult, Domain, FeatureInfo, TaskType
 
 
 def detect_dtype(series: pd.Series) -> Literal["numeric", "categorical", "binary"]:
     """Detect the dtype of a pandas Series."""
     if pd.api.types.is_numeric_dtype(series):
         unique_values = series.dropna().unique()
-        if len(unique_values) <= 2 and set(unique_values).issubset({0, 1, True, False}):
+        if len(unique_values) <= 2 and set(unique_values).issubset({0, 1}):
             return "binary"
         return "numeric"
     else:
@@ -97,19 +97,21 @@ def create_dataset_from_upload(
         if dtype == "categorical":
             categories = X[col].dropna().unique().tolist()
 
-        features.append(FeatureInfo(
-            name=col,
-            dtype=dtype,
-            description=f"Column: {col}",
-            categories=categories,
-        ))
+        features.append(
+            FeatureInfo(
+                name=col,
+                dtype=dtype,
+                description=f"Column: {col}",
+                categories=categories,
+            )
+        )
 
     # Infer task type if not provided
     if task_type is None:
         task_type = infer_task_type(y)
 
     # Determine domain
-    domain = "general"
+    domain: Domain = "general"
 
     # Create card
     card = DatasetCard(
@@ -167,7 +169,7 @@ def validate_upload(df: pd.DataFrame) -> list[str]:
     for col in df.columns:
         missing_pct = df[col].isna().mean()
         if missing_pct > 0.5:
-            warnings.append(f"Column '{col}' has {missing_pct*100:.0f}% missing values")
+            warnings.append(f"Column '{col}' has {missing_pct * 100:.0f}% missing values")
 
     # Check for constant columns
     for col in df.columns:

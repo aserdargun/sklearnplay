@@ -3,9 +3,11 @@
 Provides level selection, configuration, and conditional UI rendering.
 """
 
-from typing import Literal, Any, Callable
-import streamlit as st
+from collections.abc import Callable
 from functools import wraps
+from typing import Any, Literal, cast
+
+import streamlit as st
 
 Level = Literal["beginner", "intermediate", "advanced"]
 
@@ -32,7 +34,7 @@ def get_level() -> Level:
     """
     if "user_level" not in st.session_state:
         st.session_state.user_level = "beginner"
-    return st.session_state.user_level
+    return cast(Level, st.session_state.user_level)
 
 
 def set_level(level: Level) -> None:
@@ -69,9 +71,9 @@ def level_selector(key: str = "level_selector") -> Level:
     )
 
     if selected != current:
-        set_level(selected)
+        set_level(cast(Level, selected))
 
-    return selected
+    return cast(Level, selected)
 
 
 def level_selector_sidebar() -> Level:
@@ -90,10 +92,10 @@ def level_selector_sidebar() -> Level:
             if st.button(
                 f"{LEVEL_ICONS[level]} {level.title()}",
                 key=f"level_btn_{level}",
-                use_container_width=True,
                 type="primary" if level == current else "secondary",
+                width="stretch",
             ):
-                set_level(level)
+                set_level(cast(Level, level))
                 st.rerun()
 
         # Show current level description
@@ -137,6 +139,7 @@ def level_gate(min_level: Level):
     Returns:
         Decorator function
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -144,7 +147,9 @@ def level_gate(min_level: Level):
             if LEVEL_ORDER[current] >= LEVEL_ORDER[min_level]:
                 return func(*args, **kwargs)
             return None
+
         return wrapper
+
     return decorator
 
 
@@ -234,17 +239,40 @@ def get_param_visibility(
     """
     # Essential params shown to all
     essential_params = {
-        "n_estimators", "max_depth", "n_neighbors", "C", "alpha",
-        "n_clusters", "kernel", "contamination", "learning_rate",
+        "n_estimators",
+        "max_depth",
+        "n_neighbors",
+        "C",
+        "alpha",
+        "n_clusters",
+        "kernel",
+        "contamination",
+        "learning_rate",
     }
 
     # Intermediate-level params
     intermediate_params = {
-        "min_samples_split", "min_samples_leaf", "max_features",
-        "penalty", "solver", "gamma", "eps", "min_samples",
-        "subsample", "reg_alpha", "reg_lambda", "l2_regularization",
-        "criterion", "splitter", "init", "n_init", "max_iter",
-        "tol", "warm_start", "class_weight", "n_jobs",
+        "min_samples_split",
+        "min_samples_leaf",
+        "max_features",
+        "penalty",
+        "solver",
+        "gamma",
+        "eps",
+        "min_samples",
+        "subsample",
+        "reg_alpha",
+        "reg_lambda",
+        "l2_regularization",
+        "criterion",
+        "splitter",
+        "init",
+        "n_init",
+        "max_iter",
+        "tol",
+        "warm_start",
+        "class_weight",
+        "n_jobs",
     }
 
     if param_name in essential_params:
@@ -277,11 +305,12 @@ def get_explanation_depth() -> Literal["brief", "moderate", "detailed"]:
         Explanation depth
     """
     level = get_level()
-    return {
+    depth_map: dict[Level, Literal["brief", "moderate", "detailed"]] = {
         "beginner": "detailed",
         "intermediate": "moderate",
         "advanced": "brief",
-    }[level]
+    }
+    return depth_map[level]
 
 
 def format_help_text(

@@ -3,19 +3,19 @@
 This page covers mistakes to avoid and best practices.
 """
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="Pitfalls & Best Practices", page_icon="⚠️", layout="wide")
 
-from skplay.ui.level import get_level, level_selector
+from skplay.ui.level import level_selector
 
 
 def main():
     st.title("⚠️ Common Pitfalls and Recommended Practices")
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     st.markdown("""
     Learn from common mistakes and follow best practices for reliable ML.
@@ -54,7 +54,8 @@ def data_leakage_section():
 
     st.subheader("❌ Wrong: Preprocessing Before Splitting")
 
-    st.code("""
+    st.code(
+        """
 # WRONG - Information leaks from test set to training
 from sklearn.preprocessing import StandardScaler
 
@@ -63,11 +64,14 @@ X_scaled = scaler.fit_transform(X)  # Fit on ALL data including test!
 
 X_train, X_test, y_train, y_test = train_test_split(X_scaled, y)
 model.fit(X_train, y_train)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("✅ Right: Split First, Then Preprocess")
 
-    st.code("""
+    st.code(
+        """
 # CORRECT - Preprocess after splitting
 X_train, X_test, y_train, y_test = train_test_split(X, y)
 
@@ -76,11 +80,14 @@ X_train_scaled = scaler.fit_transform(X_train)  # Fit only on training
 X_test_scaled = scaler.transform(X_test)  # Transform test (no fitting!)
 
 model.fit(X_train_scaled, y_train)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("✅ Best: Use Pipelines")
 
-    st.code("""
+    st.code(
+        """
 # BEST - Pipeline handles it automatically
 from sklearn.pipeline import Pipeline
 
@@ -94,15 +101,33 @@ X_train, X_test, y_train, y_test = train_test_split(X, y)
 # Pipeline fits scaler only on training data
 pipeline.fit(X_train, y_train)
 score = pipeline.score(X_test, y_test)
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("Other Sources of Leakage")
 
     leakage_sources = [
-        {"Source": "Target leakage", "Example": "Using future data to predict past", "Fix": "Respect temporal order"},
-        {"Source": "Feature from target", "Example": "Including target-derived feature", "Fix": "Audit feature engineering"},
-        {"Source": "Duplicate data", "Example": "Same sample in train and test", "Fix": "Remove duplicates before split"},
-        {"Source": "Group leakage", "Example": "Same patient in train and test", "Fix": "Use GroupKFold"},
+        {
+            "Source": "Target leakage",
+            "Example": "Using future data to predict past",
+            "Fix": "Respect temporal order",
+        },
+        {
+            "Source": "Feature from target",
+            "Example": "Including target-derived feature",
+            "Fix": "Audit feature engineering",
+        },
+        {
+            "Source": "Duplicate data",
+            "Example": "Same sample in train and test",
+            "Fix": "Remove duplicates before split",
+        },
+        {
+            "Source": "Group leakage",
+            "Example": "Same patient in train and test",
+            "Fix": "Use GroupKFold",
+        },
     ]
 
     st.dataframe(pd.DataFrame(leakage_sources), hide_index=True, use_container_width=True)
@@ -121,7 +146,8 @@ def preprocessing_section():
     - **Regularization**: Penalty is scale-dependent
     """)
 
-    st.code("""
+    st.code(
+        """
 # Check if scaling is needed
 from sklearn.preprocessing import StandardScaler
 
@@ -132,7 +158,9 @@ from sklearn.preprocessing import StandardScaler
 # Algorithms that DON'T need scaling:
 # Tree-based (RandomForest, GradientBoosting, DecisionTree)
 # Naive Bayes
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("❌ Wrong Encoding for Trees")
 
@@ -143,7 +171,8 @@ from sklearn.preprocessing import StandardScaler
 
     st.subheader("❌ Ignoring Missing Values")
 
-    st.code("""
+    st.code(
+        """
 # Many algorithms can't handle NaN
 # Check for missing values
 print(X.isnull().sum())
@@ -154,7 +183,9 @@ print(X.isnull().sum())
 # 3. Use algorithms that handle missing values:
 #    - HistGradientBoostingClassifier
 #    - HistGradientBoostingRegressor
-    """, language="python")
+    """,
+        language="python",
+    )
 
 
 def evaluation_section():
@@ -163,7 +194,8 @@ def evaluation_section():
 
     st.subheader("❌ Using Accuracy with Imbalanced Data")
 
-    st.code("""
+    st.code(
+        """
 # If 95% of samples are class A, predicting all A gives 95% accuracy!
 
 # Better metrics for imbalanced data:
@@ -173,7 +205,9 @@ def evaluation_section():
 
 from sklearn.metrics import classification_report
 print(classification_report(y_test, y_pred))
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("❌ Single Train/Test Split")
 
@@ -181,17 +215,21 @@ print(classification_report(y_test, y_pred))
     A single split can be misleading. Use cross-validation for more reliable estimates.
     """)
 
-    st.code("""
+    st.code(
+        """
 from sklearn.model_selection import cross_val_score
 
 # Get multiple estimates
 scores = cross_val_score(model, X, y, cv=5)
 print(f"Accuracy: {scores.mean():.3f} (+/- {scores.std():.3f})")
-    """, language="python")
+    """,
+        language="python",
+    )
 
     st.subheader("❌ Tuning on Test Set")
 
-    st.code("""
+    st.code(
+        """
 # WRONG - Using test set for hyperparameter tuning
 for C in [0.1, 1, 10]:
     model = LogisticRegression(C=C)
@@ -201,9 +239,12 @@ for C in [0.1, 1, 10]:
         best_C = C
 
 # Test set is now "contaminated" - final score is optimistic
-    """, language="python")
+    """,
+        language="python",
+    )
 
-    st.code("""
+    st.code(
+        """
 # CORRECT - Use validation set or cross-validation
 from sklearn.model_selection import GridSearchCV
 
@@ -216,7 +257,9 @@ grid.fit(X_train, y_train)
 
 # Now test set is truly held-out
 final_score = grid.score(X_test, y_test)
-    """, language="python")
+    """,
+        language="python",
+    )
 
 
 def general_section():
@@ -224,7 +267,10 @@ def general_section():
     st.header("General Best Practices")
 
     practices = [
-        ("Always split data first", "Prevent data leakage by separating test set before any preprocessing"),
+        (
+            "Always split data first",
+            "Prevent data leakage by separating test set before any preprocessing",
+        ),
         ("Use pipelines", "Encapsulate preprocessing and modeling for cleaner, safer code"),
         ("Set random_state", "For reproducibility, always set random seeds"),
         ("Start simple", "Begin with linear models, add complexity only if needed"),
@@ -241,7 +287,8 @@ def general_section():
 
     st.subheader("Reproducibility Checklist")
 
-    st.code("""
+    st.code(
+        """
 import numpy as np
 import sklearn
 
@@ -262,7 +309,9 @@ config = {
 # Save with model
 import joblib
 joblib.dump({"model": model, "config": config}, "model.joblib")
-    """, language="python")
+    """,
+        language="python",
+    )
 
 
 if __name__ == "__main__":

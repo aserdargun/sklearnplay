@@ -136,7 +136,7 @@ def main():
     domains = ["general", "power", "retail", "finance", "healthcare"]
     tabs = st.tabs([d.title() for d in domains])
 
-    for tab, domain in zip(tabs, domains):
+    for tab, domain in zip(tabs, domains, strict=True):
         with tab:
             datasets = DatasetRegistry.list_by_domain(domain)
             if datasets:

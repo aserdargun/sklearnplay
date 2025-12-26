@@ -3,19 +3,19 @@
 This page helps users select appropriate algorithms for their problem.
 """
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="Choosing Estimator", page_icon="🧭", layout="wide")
 
-from skplay.ui.level import get_level, level_selector
+from skplay.ui.level import level_selector
 
 
 def main():
     st.title("🧭 Choosing the Right Estimator")
 
     with st.sidebar:
-        level = level_selector()
+        level_selector()
 
     st.markdown("""
     Select the right algorithm based on your problem type, data characteristics,
@@ -39,7 +39,13 @@ def main():
 
     problem_type = st.radio(
         "Select your problem type",
-        options=["classification", "regression", "clustering", "outlier_detection", "dimensionality_reduction"],
+        options=[
+            "classification",
+            "regression",
+            "clustering",
+            "outlier_detection",
+            "dimensionality_reduction",
+        ],
         format_func=lambda x: x.replace("_", " ").title(),
         horizontal=True,
     )

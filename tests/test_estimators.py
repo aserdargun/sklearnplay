@@ -4,12 +4,11 @@ import pytest
 from sklearn.base import BaseEstimator
 
 from skplay.core.estimators import (
-    EstimatorRegistry,
-    get_estimators_for_task,
-    get_estimator_names,
-    get_estimator_class,
     create_estimator,
     get_default_estimator,
+    get_estimator_class,
+    get_estimator_names,
+    get_estimators_for_task,
 )
 
 

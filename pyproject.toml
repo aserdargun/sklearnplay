@@ -71,6 +71,9 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"pages/*.py" = ["E402"]  # Streamlit requires st.set_page_config before imports
+
 [tool.ruff.lint.isort]
 known-first-party = ["skplay"]
 
@@ -81,6 +84,10 @@ addopts = "-v --tb=short"
 
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
+warn_return_any = false  # Too strict for numpy/pandas code
 warn_unused_ignores = true
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["skplay.core.preprocessing", "skplay.core.evaluation", "skplay.core.tuning"]
+disable_error_code = ["arg-type", "return-value"]  # Complex numpy/pandas typing

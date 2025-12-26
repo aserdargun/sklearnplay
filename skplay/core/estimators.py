@@ -3,68 +3,61 @@
 Maps task types to available estimators with level-based filtering.
 """
 
-from typing import Literal, Any
 from dataclasses import dataclass, field
+from typing import Any, Literal
+
 from sklearn.base import BaseEstimator
-
-# Classification
-from sklearn.linear_model import LogisticRegression, RidgeClassifier, SGDClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    GradientBoostingClassifier,
-    AdaBoostClassifier,
-    BaggingClassifier,
-    ExtraTreesClassifier,
-    HistGradientBoostingClassifier,
-)
-from sklearn.svm import SVC, LinearSVC
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
-from sklearn.neural_network import MLPClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-
-# Regression
-from sklearn.linear_model import (
-    LinearRegression,
-    Ridge,
-    Lasso,
-    ElasticNet,
-    SGDRegressor,
-    BayesianRidge,
-    HuberRegressor,
-)
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import (
-    RandomForestRegressor,
-    GradientBoostingRegressor,
-    AdaBoostRegressor,
-    BaggingRegressor,
-    ExtraTreesRegressor,
-    HistGradientBoostingRegressor,
-)
-from sklearn.svm import SVR, LinearSVR
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.neural_network import MLPRegressor
 
 # Clustering
 from sklearn.cluster import (
-    KMeans,
-    MiniBatchKMeans,
-    AgglomerativeClustering,
     DBSCAN,
     OPTICS,
-    SpectralClustering,
+    AgglomerativeClustering,
     Birch,
+    KMeans,
     MeanShift,
+    MiniBatchKMeans,
+    SpectralClustering,
 )
-from sklearn.mixture import GaussianMixture
+from sklearn.covariance import EllipticEnvelope
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 
 # Outlier detection
-from sklearn.ensemble import IsolationForest
-from sklearn.neighbors import LocalOutlierFactor
-from sklearn.svm import OneClassSVM
-from sklearn.covariance import EllipticEnvelope
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    AdaBoostRegressor,
+    BaggingClassifier,
+    ExtraTreesClassifier,
+    ExtraTreesRegressor,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    HistGradientBoostingClassifier,
+    HistGradientBoostingRegressor,
+    IsolationForest,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
+
+# Classification
+# Regression
+from sklearn.linear_model import (
+    BayesianRidge,
+    ElasticNet,
+    HuberRegressor,
+    Lasso,
+    LinearRegression,
+    LogisticRegression,
+    Ridge,
+    RidgeClassifier,
+    SGDClassifier,
+    SGDRegressor,
+)
+from sklearn.mixture import GaussianMixture
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor, LocalOutlierFactor
+from sklearn.neural_network import MLPClassifier, MLPRegressor
+from sklearn.svm import SVC, SVR, LinearSVC, LinearSVR, OneClassSVM
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from skplay.core.datasets import TaskType
 
@@ -74,6 +67,7 @@ Level = Literal["beginner", "intermediate", "advanced"]
 @dataclass
 class EstimatorInfo:
     """Information about an estimator."""
+
     name: str
     class_: type
     description: str
@@ -108,10 +102,7 @@ class EstimatorRegistry:
         level_order = {"beginner": 0, "intermediate": 1, "advanced": 2}
         max_level = level_order[level]
 
-        return [
-            info for info in cls._estimators[task_type]
-            if level_order[info.level] <= max_level
-        ]
+        return [info for info in cls._estimators[task_type] if level_order[info.level] <= max_level]
 
     @classmethod
     def get_by_name(cls, task_type: TaskType, name: str) -> EstimatorInfo | None:
@@ -597,6 +588,7 @@ for info in OUTLIER_ESTIMATORS:
 # =============================================================================
 # Utility functions
 # =============================================================================
+
 
 def get_estimators_for_task(
     task_type: TaskType,
