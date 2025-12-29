@@ -16,9 +16,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy dependency files
+# Copy all source files needed for installation
 COPY pyproject.toml ./
 COPY README.md ./
+COPY app.py ./
+COPY skplay ./skplay
+COPY pages ./pages
 
 # Create virtual environment and install dependencies
 RUN uv venv /app/.venv
@@ -26,7 +29,7 @@ ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Install production dependencies plus Azure extras
-RUN uv pip install -e ".[export]" \
+RUN uv pip install ".[export]" \
     pydantic-settings \
     sqlalchemy \
     psycopg2-binary \
