@@ -145,7 +145,7 @@ The following environment variables are automatically configured in Azure:
 
 | Resource | SKU | Monthly Cost |
 |----------|-----|--------------|
-| Container App | 0.5 vCPU, 1Gi | ~$10-15 |
+| Container App | 0.5 vCPU, 1Gi (westus2) | ~$10-15 |
 | PostgreSQL | Standard_B1ms | ~$15 |
 | Storage Account | Standard_LRS | ~$1-5 |
 | Container Registry | Basic | ~$5 |

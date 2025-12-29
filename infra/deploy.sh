@@ -7,7 +7,7 @@ set -euo pipefail
 # Configuration
 ENVIRONMENT="${1:-dev}"
 RESOURCE_GROUP="${2:-rg-skplayground-${ENVIRONMENT}}"
-LOCATION="${LOCATION:-eastus}"
+LOCATION="${LOCATION:-westus2}"
 BASE_NAME="${BASE_NAME:-skplayground}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 

@@ -18,7 +18,7 @@ on:
 
 env:
   RESOURCE_GROUP: rg-skplayground-${{ github.event.inputs.environment || 'dev' }}
-  LOCATION: eastus
+  LOCATION: westus2
   BASE_NAME: skplayground
   ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
 
