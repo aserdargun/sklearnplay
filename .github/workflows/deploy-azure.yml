@@ -83,6 +83,8 @@ jobs:
             --tags environment=${{ env.ENVIRONMENT }} application=sklearn-playground
 
       - name: Purge Soft-Deleted Key Vaults
+        env:
+          BASE_NAME: ${{ env.BASE_NAME }}
         run: |
           # Key Vault names are globally unique and soft-delete keeps the name reserved
           # Purge any soft-deleted vaults matching our naming pattern (kv-skplay-{env}-*)
