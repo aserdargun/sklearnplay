@@ -82,6 +82,15 @@ jobs:
             --location ${{ env.LOCATION }} \
             --tags environment=${{ env.ENVIRONMENT }} application=sklearn-playground
 
+      - name: Cancel Active Deployments
+        run: |
+          # Cancel any stuck deployments
+          az deployment group cancel \
+            --name main \
+            --resource-group ${{ env.RESOURCE_GROUP }} 2>/dev/null || true
+          # Wait a moment for cancellation to process
+          sleep 10
+
       - name: Generate PostgreSQL Password
         id: postgres
         run: |
