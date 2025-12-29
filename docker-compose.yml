@@ -1,0 +1,75 @@
+# Docker Compose for local development with full Azure-like stack
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # Streamlit Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      # PostgreSQL connection
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=skplayground
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=localdevpassword
+      - POSTGRES_SSL_MODE=disable
+      # Local storage (Azure storage disabled)
+      - AZURE_STORAGE_CONNECTION_STRING=
+      - AZURE_STORAGE_ACCOUNT=
+      # Auth disabled for local dev
+      - ENABLE_AUTH=false
+      - ENABLE_EXPERIMENTS=true
+      - ENABLE_MODEL_STORAGE=true
+    volumes:
+      # Mount source for hot-reload during development
+      - ./app.py:/app/app.py:ro
+      - ./pages:/app/pages:ro
+      - ./skplay:/app/skplay:ro
+      # Persist local storage
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=skplayground
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=localdevpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Azure Storage Emulator (Azurite)
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    ports:
+      - "10000:10000"  # Blob
+      - "10001:10001"  # Queue
+      - "10002:10002"  # Table
+    volumes:
+      - azurite_data:/data
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  azurite_data:
