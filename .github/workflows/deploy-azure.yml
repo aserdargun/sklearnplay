@@ -100,17 +100,15 @@ jobs:
 
       - name: Deploy Infrastructure
         id: deploy
-        uses: azure/arm-deploy@v2
-        with:
-          resourceGroupName: ${{ env.RESOURCE_GROUP }}
-          template: ./infra/main.bicep
-          deploymentName: main
-          parameters: >
-            environment=${{ env.ENVIRONMENT }}
-            baseName=${{ env.BASE_NAME }}
-            postgresAdminPassword=${{ steps.postgres.outputs.password }}
-            imageTag=${{ github.sha }}
-          failOnStdErr: false
+        run: |
+          az deployment group create \
+            --name main \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file ./infra/main.bicep \
+            --parameters environment=${{ env.ENVIRONMENT }} \
+            --parameters baseName=${{ env.BASE_NAME }} \
+            --parameters postgresAdminPassword=${{ steps.postgres.outputs.password }} \
+            --parameters imageTag=${{ github.sha }}
 
       - name: Get ACR Credentials
         id: acr
