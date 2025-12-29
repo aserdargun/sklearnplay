@@ -221,24 +221,30 @@ def _load_diabetes() -> DatasetResult:
     return DatasetResult(X=X, y=y, card=card)
 
 
-def _load_california_housing() -> DatasetResult:
-    """Load California housing dataset."""
-    data = sklearn_datasets.fetch_california_housing(as_frame=True)
-    X = data.data
-    y = data.target
-    y.name = "median_house_value"
-
-    features = [
-        FeatureInfo(name=col, dtype="numeric", description=f"Housing {col}") for col in X.columns
+def _get_california_housing_card() -> DatasetCard:
+    """Get metadata card for California housing dataset (without loading data)."""
+    # Pre-defined metadata to avoid network fetch at import time
+    feature_names = [
+        "MedInc",
+        "HouseAge",
+        "AveRooms",
+        "AveBedrms",
+        "Population",
+        "AveOccup",
+        "Latitude",
+        "Longitude",
     ]
-
-    card = DatasetCard(
+    features = [
+        FeatureInfo(name=col, dtype="numeric", description=f"Housing {col}")
+        for col in feature_names
+    ]
+    return DatasetCard(
         name="california_housing",
         description="Predict California house prices from census data.",
         task_type="regression",
         domain="general",
-        n_samples=len(X),
-        n_features=len(X.columns),
+        n_samples=20640,
+        n_features=8,
         target_name="median_house_value",
         features=features,
         source="sklearn.datasets",
@@ -246,7 +252,15 @@ def _load_california_housing() -> DatasetResult:
         tags=["regression", "larger"],
     )
 
-    return DatasetResult(X=X, y=y, card=card)
+
+def _load_california_housing() -> DatasetResult:
+    """Load California housing dataset."""
+    data = sklearn_datasets.fetch_california_housing(as_frame=True)
+    X = data.data
+    y = data.target
+    y.name = "median_house_value"
+
+    return DatasetResult(X=X, y=y, card=_get_california_housing_card())
 
 
 def _load_digits() -> DatasetResult:
@@ -733,7 +747,7 @@ def _register_all_datasets():
     DatasetRegistry.register("breast_cancer", _load_breast_cancer, _load_breast_cancer().card)
     DatasetRegistry.register("diabetes", _load_diabetes, _load_diabetes().card)
     DatasetRegistry.register(
-        "california_housing", _load_california_housing, _load_california_housing().card
+        "california_housing", _load_california_housing, _get_california_housing_card()
     )
     DatasetRegistry.register("digits", _load_digits, _load_digits().card)
 
