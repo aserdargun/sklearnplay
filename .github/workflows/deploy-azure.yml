@@ -82,11 +82,27 @@ jobs:
             --location ${{ env.LOCATION }} \
             --tags environment=${{ env.ENVIRONMENT }} application=sklearn-playground
 
-      - name: Purge Soft-Deleted Key Vault
+      - name: Purge Soft-Deleted Key Vaults
         run: |
           # Key Vault names are globally unique and soft-delete keeps the name reserved
-          # Purge any soft-deleted vault with our name
-          az keyvault purge --name kv-${{ env.BASE_NAME }}-${{ env.ENVIRONMENT }} --location ${{ env.LOCATION }} 2>/dev/null || true
+          # Purge any soft-deleted vaults matching our naming pattern (kv-skplay-{env}-*)
+          PATTERN="kv-${BASE_NAME:0:6}-${{ env.ENVIRONMENT }}"
+
+          echo "Looking for soft-deleted vaults matching pattern: ${PATTERN}*"
+          DELETED_VAULTS=$(az keyvault list-deleted --query "[?starts_with(name, '${PATTERN}')].{name:name,location:properties.location}" -o tsv 2>/dev/null || echo "")
+
+          if [ -n "$DELETED_VAULTS" ]; then
+            echo "$DELETED_VAULTS" | while read -r VAULT_NAME VAULT_LOCATION; do
+              if [ -n "$VAULT_NAME" ]; then
+                echo "Purging soft-deleted vault: $VAULT_NAME in $VAULT_LOCATION"
+                az keyvault purge --name "$VAULT_NAME" --location "$VAULT_LOCATION" || true
+              fi
+            done
+            echo "Waiting for purge operations to complete..."
+            sleep 30
+          else
+            echo "No soft-deleted vaults found matching pattern: ${PATTERN}*"
+          fi
 
       - name: Generate PostgreSQL Password
         id: postgres

@@ -23,6 +23,7 @@ param imageTag string = 'latest'
 
 // Variables
 var resourceSuffix = '${baseName}-${environment}'
+var uniqueSuffix = uniqueString(resourceGroup().id)
 var tags = {
   environment: environment
   application: 'sklearn-playground'
@@ -61,9 +62,6 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: 'cae-${resourceSuffix}'
   location: location
   tags: tags
-  dependsOn: [
-    logAnalytics
-  ]
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
@@ -153,9 +151,9 @@ resource postgresFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRul
   }
 }
 
-// Key Vault for secrets
+// Key Vault for secrets (name must be globally unique, max 24 chars)
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: 'kv-${resourceSuffix}'
+  name: 'kv-${take(baseName, 6)}-${environment}-${take(uniqueSuffix, 5)}'
   location: location
   tags: tags
   properties: {
@@ -197,7 +195,6 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   location: location
   tags: tags
   dependsOn: [
-    containerRegistry
     postgresDatabase
     modelsContainer
     datasetsContainer
