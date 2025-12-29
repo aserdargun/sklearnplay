@@ -135,7 +135,7 @@ def show_experiment_comparison(experiments: list[ExperimentRun]) -> None:
     # Create columns for each experiment
     cols = st.columns(len(experiments))
 
-    for col, exp in zip(cols, experiments):
+    for col, exp in zip(cols, experiments, strict=False):
         with col:
             st.markdown(f"**{exp.name}**")
             st.caption(f"{exp.estimator_name}")

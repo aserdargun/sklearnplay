@@ -14,7 +14,6 @@ from skplay.config import settings
 # Azure SDK is optional
 try:
     from azure.storage.blob import (
-        BlobClient,
         BlobSasPermissions,
         BlobServiceClient,
         ContainerClient,
