@@ -95,6 +95,7 @@ jobs:
         with:
           resourceGroupName: ${{ env.RESOURCE_GROUP }}
           template: ./infra/main.bicep
+          deploymentName: main
           parameters: >
             environment=${{ env.ENVIRONMENT }}
             baseName=${{ env.BASE_NAME }}
