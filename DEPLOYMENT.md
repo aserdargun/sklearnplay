@@ -52,26 +52,38 @@ Automated CI/CD pipeline that deploys on every push to `main`.
 
    ```bash
    # Get your subscription ID
-   az account show --query id -o tsv
+   SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+   echo "Subscription ID: $SUBSCRIPTION_ID"
 
    # Create service principal with Contributor role
    az ad sp create-for-rbac \
      --name "github-skplayground" \
      --role Contributor \
-     --scopes /subscriptions/<YOUR_SUBSCRIPTION_ID> \
-     --sdk-auth
+     --scopes /subscriptions/$SUBSCRIPTION_ID
    ```
 
-   This outputs JSON credentials - save them securely.
+   This outputs JSON like:
+   ```json
+   {
+     "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+     "displayName": "github-skplayground",
+     "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "tenant": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   }
+   ```
 
 2. **Configure GitHub Secrets**
 
-   Go to your repository → Settings → Secrets and variables → Actions
+   Go to your repository → Settings → Secrets and variables → Actions → New repository secret
 
-   Add these secrets:
-   | Secret Name | Value |
-   |-------------|-------|
-   | `AZURE_CREDENTIALS` | The entire JSON output from step 1 |
+   Add these 4 secrets:
+
+   | Secret Name | Value from step 1 |
+   |-------------|-------------------|
+   | `AZURE_CLIENT_ID` | `appId` value |
+   | `AZURE_CLIENT_SECRET` | `password` value |
+   | `AZURE_TENANT_ID` | `tenant` value |
+   | `AZURE_SUBSCRIPTION_ID` | Your subscription ID |
 
 3. **Trigger Deployment**
 
