@@ -2,7 +2,7 @@
 # Optimized for Azure Container Apps deployment
 
 # Stage 1: Builder
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install uv for fast dependency resolution
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
 # Copy dependency files
 COPY pyproject.toml ./
@@ -35,7 +35,7 @@ RUN uv pip install -e ".[export]" \
     azure-identity
 
 # Stage 2: Runtime
-FROM python:3.12-slim as runtime
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
