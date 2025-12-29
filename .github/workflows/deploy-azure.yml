@@ -82,6 +82,12 @@ jobs:
             --location ${{ env.LOCATION }} \
             --tags environment=${{ env.ENVIRONMENT }} application=sklearn-playground
 
+      - name: Purge Soft-Deleted Key Vault
+        run: |
+          # Key Vault names are globally unique and soft-delete keeps the name reserved
+          # Purge any soft-deleted vault with our name
+          az keyvault purge --name kv-${{ env.BASE_NAME }}-${{ env.ENVIRONMENT }} --location ${{ env.LOCATION }} 2>/dev/null || true
+
       - name: Generate PostgreSQL Password
         id: postgres
         run: |

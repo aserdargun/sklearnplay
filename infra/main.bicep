@@ -61,6 +61,9 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: 'cae-${resourceSuffix}'
   location: location
   tags: tags
+  dependsOn: [
+    logAnalytics
+  ]
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
@@ -193,6 +196,12 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: 'ca-${resourceSuffix}'
   location: location
   tags: tags
+  dependsOn: [
+    containerRegistry
+    postgresDatabase
+    modelsContainer
+    datasetsContainer
+  ]
   properties: {
     managedEnvironmentId: containerAppsEnv.id
     configuration: {
