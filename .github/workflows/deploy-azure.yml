@@ -1,0 +1,152 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  RESOURCE_GROUP: rg-skplayground-${{ github.event.inputs.environment || 'dev' }}
+  LOCATION: eastus
+  BASE_NAME: skplayground
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run linting
+        run: uv run ruff check .
+
+      - name: Run tests
+        run: uv run pytest -v
+
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Resource Group
+        run: |
+          az group create \
+            --name ${{ env.RESOURCE_GROUP }} \
+            --location ${{ env.LOCATION }} \
+            --tags environment=${{ env.ENVIRONMENT }} application=sklearn-playground
+
+      - name: Generate PostgreSQL Password
+        id: postgres
+        run: |
+          PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
+          echo "::add-mask::$PASSWORD"
+          echo "password=$PASSWORD" >> $GITHUB_OUTPUT
+
+      - name: Deploy Infrastructure
+        id: deploy
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: >
+            environment=${{ env.ENVIRONMENT }}
+            baseName=${{ env.BASE_NAME }}
+            postgresAdminPassword=${{ steps.postgres.outputs.password }}
+            imageTag=${{ github.sha }}
+          failOnStdErr: false
+
+      - name: Get ACR Credentials
+        id: acr
+        run: |
+          ACR_NAME=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.containerRegistryName.value -o tsv)
+
+          ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer -o tsv)
+          ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" -o tsv)
+
+          echo "::add-mask::$ACR_PASSWORD"
+          echo "name=$ACR_NAME" >> $GITHUB_OUTPUT
+          echo "login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          echo "username=$ACR_USERNAME" >> $GITHUB_OUTPUT
+          echo "password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker Image
+        run: |
+          echo "${{ steps.acr.outputs.password }}" | docker login \
+            ${{ steps.acr.outputs.login_server }} \
+            -u ${{ steps.acr.outputs.username }} \
+            --password-stdin
+
+          docker build -t ${{ steps.acr.outputs.login_server }}/sklearn-playground:${{ github.sha }} .
+          docker build -t ${{ steps.acr.outputs.login_server }}/sklearn-playground:latest .
+
+          docker push ${{ steps.acr.outputs.login_server }}/sklearn-playground:${{ github.sha }}
+          docker push ${{ steps.acr.outputs.login_server }}/sklearn-playground:latest
+
+      - name: Update Container App
+        run: |
+          CONTAINER_APP_NAME=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.containerAppName.value -o tsv)
+
+          az containerapp update \
+            --name $CONTAINER_APP_NAME \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ steps.acr.outputs.login_server }}/sklearn-playground:${{ github.sha }}
+
+      - name: Get Deployment URL
+        id: url
+        run: |
+          APP_URL=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.containerAppUrl.value -o tsv)
+          echo "url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Application URL: $APP_URL" >> $GITHUB_STEP_SUMMARY
+
+      - name: Azure Logout
+        if: always()
+        run: az logout
+
+    outputs:
+      app_url: ${{ steps.url.outputs.url }}

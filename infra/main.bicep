@@ -1,5 +1,5 @@
 // Main Bicep template for sklearn-playground Azure infrastructure
-// Deploys: Container Apps, PostgreSQL Flexible Server, Storage Account, Key Vault
+// Deploys: Container Registry, Container Apps, PostgreSQL Flexible Server, Storage Account, Key Vault
 
 @description('Environment name (dev, staging, prod)')
 @allowed(['dev', 'staging', 'prod'])
@@ -18,18 +18,8 @@ param postgresAdminUser string = 'pgadmin'
 @secure()
 param postgresAdminPassword string
 
-@description('Azure Entra ID tenant ID for authentication')
-param azureTenantId string = ''
-
-@description('Azure Entra ID client ID for authentication')
-param azureClientId string = ''
-
-@description('Azure Entra ID client secret for authentication')
-@secure()
-param azureClientSecret string = ''
-
-@description('Container image to deploy')
-param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+@description('Container image tag to deploy')
+param imageTag string = 'latest'
 
 // Variables
 var resourceSuffix = '${baseName}-${environment}'
@@ -49,6 +39,20 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
       name: 'PerGB2018'
     }
     retentionInDays: 30
+  }
+}
+
+// Azure Container Registry
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: replace('acr${baseName}${environment}', '-', '')
+  location: location
+  tags: tags
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: true
+    publicNetworkAccess: 'Enabled'
   }
 }
 
@@ -183,13 +187,6 @@ resource secretStorageKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource secretAzureClientSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(azureClientSecret)) {
-  parent: keyVault
-  name: 'azure-client-secret'
-  properties: {
-    value: azureClientSecret
-  }
-}
 
 // Container App
 resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
@@ -205,7 +202,18 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
         transport: 'http'
         allowInsecure: false
       }
+      registries: [
+        {
+          server: containerRegistry.properties.loginServer
+          username: containerRegistry.listCredentials().username
+          passwordSecretRef: 'acr-password'
+        }
+      ]
       secrets: [
+        {
+          name: 'acr-password'
+          value: containerRegistry.listCredentials().passwords[0].value
+        }
         {
           name: 'postgres-password'
           value: postgresAdminPassword
@@ -214,17 +222,13 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'storage-connection-string'
           value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
         }
-        {
-          name: 'azure-client-secret'
-          value: azureClientSecret
-        }
       ]
     }
     template: {
       containers: [
         {
           name: 'sklearn-playground'
-          image: containerImage
+          image: '${containerRegistry.properties.loginServer}/sklearn-playground:${imageTag}'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -267,20 +271,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: storageAccount.name
             }
             {
-              name: 'AZURE_TENANT_ID'
-              value: azureTenantId
-            }
-            {
-              name: 'AZURE_CLIENT_ID'
-              value: azureClientId
-            }
-            {
-              name: 'AZURE_CLIENT_SECRET'
-              secretRef: 'azure-client-secret'
-            }
-            {
               name: 'ENABLE_AUTH'
-              value: empty(azureClientId) ? 'false' : 'true'
+              value: 'false'
             }
             {
               name: 'ENABLE_EXPERIMENTS'
@@ -294,7 +286,7 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: 1
         maxReplicas: 3
         rules: [
           {
@@ -314,6 +306,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
 // Outputs
 output containerAppUrl string = 'https://${containerApp.properties.configuration.ingress.fqdn}'
 output containerAppName string = containerApp.name
+output containerRegistryName string = containerRegistry.name
+output containerRegistryLoginServer string = containerRegistry.properties.loginServer
 output storageAccountName string = storageAccount.name
 output postgresServerName string = postgresServer.name
 output postgresServerFqdn string = postgresServer.properties.fullyQualifiedDomainName
