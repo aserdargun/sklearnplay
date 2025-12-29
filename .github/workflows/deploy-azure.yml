@@ -62,6 +62,19 @@ jobs:
         with:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
+      - name: Wait for Resource Group if Deleting
+        run: |
+          # Check if resource group exists and is being deleted
+          STATE=$(az group show --name ${{ env.RESOURCE_GROUP }} --query "properties.provisioningState" -o tsv 2>/dev/null || echo "NotFound")
+          if [ "$STATE" = "Deleting" ]; then
+            echo "Resource group is being deleted. Waiting for completion..."
+            while [ "$STATE" = "Deleting" ]; do
+              sleep 30
+              STATE=$(az group show --name ${{ env.RESOURCE_GROUP }} --query "properties.provisioningState" -o tsv 2>/dev/null || echo "NotFound")
+              echo "Current state: $STATE"
+            done
+          fi
+
       - name: Create Resource Group
         run: |
           az group create \
