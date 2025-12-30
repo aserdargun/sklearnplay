@@ -339,10 +339,6 @@ def data_section():
                     task_type=task_type,
                     dataset_name=uploaded_file.name.replace(".csv", ""),
                 )
-                # DEBUG: Verify data before storing
-                st.write(f"[DEBUG] Created dataset - X.shape: {result.X.shape}, columns: {list(result.X.columns)[:5]}")
-                st.write(f"[DEBUG] Card: n_samples={result.card.n_samples}, n_features={result.card.n_features}")
-
                 st.session_state.current_data = result
                 st.session_state.current_task = task_type
                 # Clear stale results from previous dataset
@@ -351,14 +347,9 @@ def data_section():
                 st.success(
                     f"Dataset created: {result.X.shape[0]} samples, {result.X.shape[1]} features"
                 )
-                # Don't rerun - let user see debug output and manually proceed
-                # st.rerun()
+                st.rerun()
 
-    # DEBUG: Verify data when returning from session state
-    stored_data = st.session_state.get("current_data")
-    if stored_data is not None:
-        st.write(f"[DEBUG data_section] Returning from session - X.shape: {stored_data.X.shape}, columns: {list(stored_data.X.columns)[:5]}")
-    return stored_data
+    return st.session_state.get("current_data")
 
 
 def preprocessing_section(data_result):
@@ -506,10 +497,6 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
     # Encode target if needed
     y_encoded, label_encoder = encode_target(y, task_type)
 
-    # DEBUG: Log before split
-    st.write(f"[DEBUG train_model] Before split - X.shape: {X.shape}, columns: {list(X.columns)}")
-    st.write(f"[DEBUG train_model] X.dtypes: {dict(X.dtypes)}")
-
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -517,9 +504,6 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
         test_size=split_config["test_size"],
         random_state=split_config["random_state"],
     )
-
-    # DEBUG: Log after split
-    st.write(f"[DEBUG train_model] After split - X_train.shape: {X_train.shape}")
 
     # Build preprocessing pipeline
     preproc_builder = PreprocessingBuilder(
@@ -539,16 +523,6 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
     preprocessing_pipeline, numeric_cols, categorical_cols = preproc_builder.build_full_pipeline(
         X_train,
     )
-
-    # DEBUG: Log pipeline configuration and test preprocessing output
-    st.write(f"[DEBUG train_model] Pipeline built - numeric_cols: {numeric_cols}, categorical_cols: {categorical_cols}")
-    try:
-        test_transform = preprocessing_pipeline.fit_transform(X_train.head(5))
-        st.write(f"[DEBUG train_model] Preprocessing test output shape: {test_transform.shape}")
-        if test_transform.shape[1] == 0:
-            st.error("[DEBUG train_model] CRITICAL: Preprocessing produces 0 features!")
-    except Exception as e:
-        st.error(f"[DEBUG train_model] Preprocessing test failed: {e}")
 
     # Create estimator
     estimator = create_estimator(task_type, estimator_info.name, **params)
@@ -582,10 +556,6 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
             f"X_train columns: {list(X_train.columns)}, "
             f"numeric_cols: {numeric_cols}, categorical_cols: {categorical_cols}"
         )
-
-    # DEBUG: Final check before fit
-    st.write(f"[DEBUG train_model] About to fit - X_train.shape: {X_train.shape}")
-    st.write(f"[DEBUG train_model] X_train.columns: {list(X_train.columns)}")
 
     # Fit
     full_pipeline.fit(X_train, y_train)

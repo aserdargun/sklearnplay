@@ -108,14 +108,9 @@ def identify_column_types(
         elif pd.api.types.is_datetime64_any_dtype(X[col]):
             # Datetime columns can't be used directly by sklearn transformers
             # Skip them - they need special handling (conversion to numeric features)
-            print(f"[DEBUG preprocessing.py] Skipping datetime column '{col}' - not compatible with sklearn transformers")
             continue
         else:
             categorical_cols.append(col)
-
-    # DEBUG: Log column type detection results
-    print(f"[DEBUG preprocessing.py] identify_column_types: X.shape={X.shape}")
-    print(f"[DEBUG preprocessing.py] identify_column_types: numeric={numeric_cols}, categorical={categorical_cols}")
 
     return numeric_cols, categorical_cols
 
@@ -220,11 +215,6 @@ class PreprocessingBuilder:
         numeric_cols = [c for c in numeric_cols if c is not None and c != '']
         categorical_cols = [c for c in categorical_cols if c is not None and c != '']
 
-        # DEBUG: Log what columns will be transformed
-        print(f"[DEBUG preprocessing.py] build_column_transformer: numeric={numeric_cols}, categorical={categorical_cols}")
-        if not numeric_cols and not categorical_cols:
-            print("[DEBUG preprocessing.py] CRITICAL: Both numeric_cols and categorical_cols are EMPTY!")
-
         if numeric_cols:
             num_pipeline = self.build_numeric_pipeline()
             if num_pipeline:
@@ -323,9 +313,6 @@ class PreprocessingBuilder:
             steps.append(("dim_reduction", dim_reducer))
 
         pipeline = Pipeline(steps)
-
-        # DEBUG: Log final pipeline configuration
-        print(f"[DEBUG preprocessing.py] build_full_pipeline: returning numeric={numeric_cols}, categorical={categorical_cols}")
 
         return pipeline, numeric_cols, categorical_cols
 

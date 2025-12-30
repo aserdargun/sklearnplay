@@ -138,15 +138,9 @@ def create_dataset_from_upload(
         df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
         # Sort by datetime
         df = df.sort_values(datetime_column).reset_index(drop=True)
-        # DEBUG: Log datetime parsing results
-        nat_count = df[datetime_column].isna().sum()
-        print(f"[DEBUG upload.py] Datetime '{datetime_column}': {len(df) - nat_count}/{len(df)} parsed successfully")
-        if nat_count == len(df):
-            print(f"[DEBUG upload.py] WARNING: All values in '{datetime_column}' failed to parse!")
         # Convert datetime to Unix timestamp (seconds) for ML compatibility
         # sklearn transformers can't handle datetime64 directly
         df[datetime_column] = df[datetime_column].astype("int64") // 10**9  # nanoseconds to seconds
-        print(f"[DEBUG upload.py] Converted '{datetime_column}' to Unix timestamp (numeric)")
 
     # Split features and target
     if target_column and target_column in df.columns:
@@ -163,10 +157,6 @@ def create_dataset_from_upload(
             "Dataset has no feature columns. Please ensure your CSV has at least one "
             "column besides the target column."
         )
-
-    # DEBUG: Log X shape after creation
-    print(f"[DEBUG upload.py] After split - X.shape: {X.shape}, columns: {list(X.columns)}")
-    print(f"[DEBUG upload.py] Column dtypes: {dict(X.dtypes)}")
 
     # Detect feature types
     features = []
