@@ -370,6 +370,14 @@ def results_section(model_result, data_result, task_type):
     config = get_level_config()
 
     if task_type == "clustering":
+        # Check if this is actually a clustering result
+        if "labels" not in model_result:
+            st.warning(
+                "Model was trained for a different task. "
+                "Please retrain with Clustering selected."
+            )
+            return
+
         # Clustering metrics
         metrics = model_result["metrics"]
         show_metrics_table(metrics, "Clustering Metrics")
@@ -414,7 +422,15 @@ def results_section(model_result, data_result, task_type):
 
     else:
         # Outlier detection
-        if model_result["metrics"]:
+        # Check if this is actually an outlier detection result
+        if "predictions" not in model_result:
+            st.warning(
+                "Model was trained for a different task. "
+                "Please retrain with Outlier Detection selected."
+            )
+            return
+
+        if model_result.get("metrics"):
             show_metrics_table(model_result["metrics"], "Detection Metrics")
         else:
             st.info("No ground truth labels available for metrics")
@@ -424,11 +440,12 @@ def results_section(model_result, data_result, task_type):
         # Score distribution
         st.subheader("Score Distribution")
 
-        if model_result["scores"] is not None:
+        scores = model_result.get("scores")
+        if scores is not None:
             fig = plot_outlier_scores(
-                model_result["scores"],
+                scores,
                 y_true=model_result["y_true"].values
-                if model_result["y_true"] is not None
+                if model_result.get("y_true") is not None
                 else None,
             )
             st.pyplot(fig)
