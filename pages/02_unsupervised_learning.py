@@ -141,6 +141,11 @@ def data_section(task_type):
             show_dataset_card(result.card)
             show_data_preview(result.X, result.y)
 
+            # Clear stale results if dataset changed
+            old_data = st.session_state.get("unsup_current_data")
+            if old_data is None or old_data.card.name != result.card.name:
+                st.session_state.pop("unsup_training_result", None)
+
             st.session_state.unsup_current_data = result
             return result
 
@@ -198,29 +203,106 @@ def data_section(task_type):
         )
 
         if uploaded_file:
-            from skplay.core.upload import create_dataset_from_upload
+            # Track which file was last uploaded to detect file changes
+            current_file_name = uploaded_file.name
+            last_uploaded_file = st.session_state.get("unsup_last_uploaded_file")
+
+            if last_uploaded_file != current_file_name:
+                # New file uploaded - clear ALL stale data immediately
+                st.session_state.pop("unsup_current_data", None)
+                st.session_state.pop("unsup_training_result", None)
+                st.session_state["unsup_last_uploaded_file"] = current_file_name
+
+            from skplay.core.upload import (
+                create_dataset_from_upload,
+                detect_datetime_column,
+                get_column_summary,
+                validate_upload,
+            )
 
             df = pd.read_csv(uploaded_file)
             st.dataframe(df.head(), width="stretch")
 
-            # Optional target for evaluation
-            target_col = st.selectbox(
-                "Target Column (optional, for evaluation)",
-                options=[None] + list(df.columns),
-                format_func=lambda x: "(No target)" if x is None else x,
-                key="unsup_target_col",
-            )
+            # Show validation warnings
+            warnings = validate_upload(df)
+            if warnings:
+                for warning in warnings:
+                    st.warning(warning)
+
+            # Show column summary
+            with st.expander("Column Summary", expanded=True):
+                summary = get_column_summary(df)
+                summary_rows = []
+                for col, info in summary.items():
+                    row = {
+                        "Column": col,
+                        "Type": info["inferred_type"],
+                        "Dtype": info["dtype"],
+                        "Unique": info["n_unique"],
+                        "Missing": f"{info['n_missing']} ({info['missing_pct']}%)",
+                    }
+                    if "mean" in info:
+                        row["Stats"] = f"min={info['min']:.2g}, max={info['max']:.2g}, mean={info['mean']:.2g}"
+                    else:
+                        samples = info.get("sample_values", [])[:3]
+                        row["Stats"] = f"samples: {samples}"
+                    summary_rows.append(row)
+                st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Optional target for evaluation
+                target_col = st.selectbox(
+                    "Target Column (optional, for evaluation)",
+                    options=[None] + list(df.columns),
+                    format_func=lambda x: "(No target)" if x is None else x,
+                    key="unsup_target_col",
+                )
+
+            with col2:
+                # Datetime column selection (auto-detect)
+                detected_datetime = detect_datetime_column(df)
+                datetime_options = [None] + list(df.columns)
+                default_idx = 0
+                if detected_datetime:
+                    default_idx = datetime_options.index(detected_datetime)
+
+                datetime_col = st.selectbox(
+                    "Datetime Index Column",
+                    options=datetime_options,
+                    index=default_idx,
+                    format_func=lambda x: "(None)" if x is None else x,
+                    key="unsup_datetime_col",
+                    help="Set a timestamp column as the DataFrame index for time series data",
+                )
+
+            # Show status of dataset creation
+            existing_data = st.session_state.get("unsup_current_data")
+            if existing_data is None:
+                st.warning("Click 'Create Dataset' to prepare your data for training.")
+            else:
+                # Show info about the currently loaded dataset
+                st.info(
+                    f"Ready for training: **{existing_data.card.name}** "
+                    f"({existing_data.X.shape[0]} samples, {existing_data.X.shape[1]} features)"
+                )
 
             if st.button("Create Dataset", key="unsup_create"):
                 result = create_dataset_from_upload(
                     df,
                     target_column=target_col,
+                    datetime_column=datetime_col,
                     task_type=task_type,
                     dataset_name=uploaded_file.name.replace(".csv", ""),
                 )
                 st.session_state.unsup_current_data = result
-                st.success("Dataset created!")
-                return result
+                # Clear stale results from previous dataset
+                st.session_state.pop("unsup_training_result", None)
+                st.success(
+                    f"Dataset created: {result.X.shape[0]} samples, {result.X.shape[1]} features"
+                )
+                st.rerun()
 
     return st.session_state.get("unsup_current_data")
 
@@ -255,6 +337,15 @@ def model_section(data_result, preproc_config, task_type):
     """Model selection and training section."""
     st.header("Select and Train Model")
 
+    # Show current dataset info
+    card = data_result.card
+    target_info = f" | **Target:** {card.target_name}" if card.target_name else ""
+    st.info(
+        f"**Training Dataset:** {card.name}  \n"
+        f"**Samples:** {card.n_samples} | **Features:** {card.n_features} | "
+        f"**Task:** {task_type}{target_info}"
+    )
+
     level = get_level()
 
     # Estimator selection
@@ -284,8 +375,11 @@ def model_section(data_result, preproc_config, task_type):
 
 def train_unsupervised_model(data_result, preproc_config, estimator_info, params, task_type):
     """Train an unsupervised model."""
-    X = data_result.X
+    X = data_result.X.copy()
     y = data_result.y  # May be None or used for evaluation
+
+    # Ensure column names are strings to avoid type mismatches in sklearn
+    X.columns = [str(c) for c in X.columns]
 
     # Build preprocessing pipeline
     preproc_builder = PreprocessingBuilder(

@@ -1,6 +1,7 @@
 """Reusable UI components for the Streamlit app."""
 
 import io
+import math
 from typing import Any
 
 import joblib
@@ -250,15 +251,34 @@ def render_param_widget(
             return st.number_input(param_name, value=default_value, key=key, help=help_text)
 
     elif isinstance(default_value, float):
+        # Handle infinity values - Streamlit can't display them
+        if math.isinf(default_value) or math.isnan(default_value):
+            # Skip parameters with inf/nan defaults - they're usually not user-adjustable
+            return None
+
         # Determine reasonable range
         if "learning_rate" in param_name:
             return st.slider(
                 param_name, 0.001, 1.0, default_value, step=0.01, key=key, help=help_text
             )
-        elif param_name in ("C", "alpha"):
+        elif param_name == "C":
             return st.slider(
                 param_name, 0.001, 100.0, float(default_value), key=key, help=help_text
             )
+        elif param_name == "alpha":
+            # alpha has different meanings for different estimators
+            estimator_lower = estimator_name.lower() if estimator_name else ""
+            if "gradientboosting" in estimator_lower:
+                # For GradientBoosting, alpha is quantile and must be in (0, 1) exclusive
+                clamped_default = max(0.01, min(0.99, float(default_value)))
+                return st.slider(
+                    param_name, 0.01, 0.99, clamped_default, step=0.01, key=key, help=help_text
+                )
+            else:
+                # For Ridge, Lasso, etc., alpha is regularization strength
+                return st.slider(
+                    param_name, 0.001, 100.0, float(default_value), key=key, help=help_text
+                )
         elif param_name in ("contamination", "subsample"):
             return st.slider(
                 param_name, 0.01, 1.0, default_value, step=0.01, key=key, help=help_text
@@ -333,6 +353,29 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str | None] 
             return ["log_loss", "exponential"]
         elif "gradientboostingregressor" in estimator_lower:
             return ["squared_error", "absolute_error", "huber", "quantile"]
+        elif "linearsvr" in estimator_lower or "linear svr" in estimator_lower:
+            return ["epsilon_insensitive", "squared_epsilon_insensitive"]
+        elif "linearsvc" in estimator_lower or "linear svc" in estimator_lower:
+            return ["hinge", "squared_hinge"]
+
+    # Handle algorithm parameter which varies by estimator
+    if param_name == "algorithm":
+        if "k-means" in estimator_lower or "kmeans" in estimator_lower:
+            return ["lloyd", "elkan"]
+        else:
+            # KNeighbors, BallTree, etc.
+            return ["auto", "ball_tree", "kd_tree", "brute"]
+
+    # Handle solver parameter which varies by estimator
+    if param_name == "solver":
+        if "mlp" in estimator_lower:
+            # MLPClassifier/MLPRegressor only accept these solvers
+            return ["adam", "lbfgs", "sgd"]
+        elif "logisticregression" in estimator_lower:
+            return ["lbfgs", "liblinear", "newton-cg", "newton-cholesky", "sag", "saga"]
+        elif "ridge" in estimator_lower:
+            return ["auto", "svd", "cholesky", "lsqr", "sparse_cg", "sag", "saga"]
+        # Fall through to options_map for other estimators
 
     options_map: dict[str, list[str | None]] = {
         "kernel": ["linear", "poly", "rbf", "sigmoid"],
@@ -354,7 +397,6 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str | None] 
         "linkage": ["ward", "complete", "average", "single"],
         "metric": ["euclidean", "manhattan", "cosine", "minkowski"],
         "weights": ["uniform", "distance"],
-        "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
         "activation": ["identity", "logistic", "tanh", "relu"],
         "learning_rate": ["constant", "optimal", "invscaling", "adaptive"],
         "covariance_type": ["full", "tied", "diag", "spherical"],

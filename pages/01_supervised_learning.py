@@ -46,8 +46,32 @@ from skplay.ui.components import (
 from skplay.ui.level import get_level, get_level_config, level_selector
 
 
+def validate_session_state():
+    """Check for and clean up stale session state data."""
+    current_data = st.session_state.get("current_data")
+    if current_data is not None:
+        # Verify that the stored X matches the card metadata
+        try:
+            card = current_data.card
+            X = current_data.X
+            if X.shape[0] != card.n_samples or X.shape[1] != card.n_features:
+                # Data is corrupted/stale, clear everything
+                st.session_state.pop("current_data", None)
+                st.session_state.pop("training_result", None)
+                st.session_state.pop("preproc_config", None)
+                st.warning("Stale data detected and cleared. Please reload your dataset.")
+        except Exception:
+            # If we can't validate, clear to be safe
+            st.session_state.pop("current_data", None)
+            st.session_state.pop("training_result", None)
+            st.session_state.pop("preproc_config", None)
+
+
 def main():
     st.title("🎯 Supervised Learning")
+
+    # Clean up any stale session state
+    validate_session_state()
 
     st.markdown("""
     Supervised learning uses labeled data to train models that predict outcomes.
@@ -158,6 +182,12 @@ def data_section():
             show_dataset_card(result.card)
             show_data_preview(result.X, result.y)
 
+            # Clear stale results if dataset changed
+            old_data = st.session_state.get("current_data")
+            if old_data is None or old_data.card.name != result.card.name:
+                st.session_state.pop("training_result", None)
+                st.session_state.pop("preproc_config", None)
+
             st.session_state.current_data = result
             st.session_state.current_task = task_type
             return result
@@ -216,32 +246,119 @@ def data_section():
         )
 
         if uploaded_file:
-            from skplay.core.upload import create_dataset_from_upload
+            # Track which file was last uploaded to detect file changes
+            current_file_name = uploaded_file.name
+            last_uploaded_file = st.session_state.get("last_uploaded_file")
+
+            if last_uploaded_file != current_file_name:
+                # New file uploaded - clear ALL stale data immediately
+                st.session_state.pop("current_data", None)
+                st.session_state.pop("training_result", None)
+                st.session_state.pop("preproc_config", None)
+                st.session_state["last_uploaded_file"] = current_file_name
+            from skplay.core.upload import (
+                create_dataset_from_upload,
+                detect_datetime_column,
+                get_column_summary,
+                validate_upload,
+            )
 
             df = pd.read_csv(uploaded_file)
             st.dataframe(df.head(), width="stretch")
 
-            # Target column selection
-            target_col = st.selectbox(
-                "Target Column",
-                options=[None] + list(df.columns),
-                format_func=lambda x: "(No target)" if x is None else x,
-                key="target_col",
-            )
+            # Show validation warnings
+            warnings = validate_upload(df)
+            if warnings:
+                for warning in warnings:
+                    st.warning(warning)
+
+            # Show column summary
+            with st.expander("Column Summary", expanded=True):
+                summary = get_column_summary(df)
+                summary_rows = []
+                for col, info in summary.items():
+                    row = {
+                        "Column": col,
+                        "Type": info["inferred_type"],
+                        "Dtype": info["dtype"],
+                        "Unique": info["n_unique"],
+                        "Missing": f"{info['n_missing']} ({info['missing_pct']}%)",
+                    }
+                    if "mean" in info:
+                        row["Stats"] = f"min={info['min']:.2g}, max={info['max']:.2g}, mean={info['mean']:.2g}"
+                    else:
+                        samples = info.get("sample_values", [])[:3]
+                        row["Stats"] = f"samples: {samples}"
+                    summary_rows.append(row)
+                st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Target column selection
+                target_col = st.selectbox(
+                    "Target Column",
+                    options=[None] + list(df.columns),
+                    format_func=lambda x: "(No target)" if x is None else x,
+                    key="target_col",
+                )
+
+            with col2:
+                # Datetime column selection (auto-detect)
+                detected_datetime = detect_datetime_column(df)
+                datetime_options = [None] + list(df.columns)
+                default_idx = 0
+                if detected_datetime:
+                    default_idx = datetime_options.index(detected_datetime)
+
+                datetime_col = st.selectbox(
+                    "Datetime Index Column",
+                    options=datetime_options,
+                    index=default_idx,
+                    format_func=lambda x: "(None)" if x is None else x,
+                    key="datetime_col",
+                    help="Set a timestamp column as the DataFrame index for time series data",
+                )
+
+            # Show status of dataset creation
+            existing_data = st.session_state.get("current_data")
+            if existing_data is None:
+                st.warning("Click 'Create Dataset' to prepare your data for training.")
+            else:
+                # Show info about the currently loaded dataset
+                st.info(
+                    f"Ready for training: **{existing_data.card.name}** "
+                    f"({existing_data.X.shape[0]} samples, {existing_data.X.shape[1]} features)"
+                )
 
             if st.button("Create Dataset"):
                 result = create_dataset_from_upload(
                     df,
                     target_column=target_col,
+                    datetime_column=datetime_col,
                     task_type=task_type,
                     dataset_name=uploaded_file.name.replace(".csv", ""),
                 )
+                # DEBUG: Verify data before storing
+                st.write(f"[DEBUG] Created dataset - X.shape: {result.X.shape}, columns: {list(result.X.columns)[:5]}")
+                st.write(f"[DEBUG] Card: n_samples={result.card.n_samples}, n_features={result.card.n_features}")
+
                 st.session_state.current_data = result
                 st.session_state.current_task = task_type
-                st.success("Dataset created!")
-                return result
+                # Clear stale results from previous dataset
+                st.session_state.pop("training_result", None)
+                st.session_state.pop("preproc_config", None)
+                st.success(
+                    f"Dataset created: {result.X.shape[0]} samples, {result.X.shape[1]} features"
+                )
+                # Don't rerun - let user see debug output and manually proceed
+                # st.rerun()
 
-    return st.session_state.get("current_data")
+    # DEBUG: Verify data when returning from session state
+    stored_data = st.session_state.get("current_data")
+    if stored_data is not None:
+        st.write(f"[DEBUG data_section] Returning from session - X.shape: {stored_data.X.shape}, columns: {list(stored_data.X.columns)[:5]}")
+    return stored_data
 
 
 def preprocessing_section(data_result):
@@ -283,6 +400,33 @@ def model_section(data_result, preproc_config):
     """Model selection and training section."""
     st.header("Select and Train Model")
 
+    # Show current dataset info with actual data verification
+    card = data_result.card
+    actual_X = data_result.X
+    st.info(
+        f"**Training Dataset:** {card.name}  \n"
+        f"**Card says:** {card.n_samples} samples, {card.n_features} features  \n"
+        f"**Actual X:** {actual_X.shape[0]} samples, {actual_X.shape[1]} features  \n"
+        f"**Columns:** {list(actual_X.columns)[:5]}{'...' if len(actual_X.columns) > 5 else ''}  \n"
+        f"**Task:** {card.task_type} | **Target:** {card.target_name}"
+    )
+
+    # Early validation - don't allow training without target
+    if data_result.y is None:
+        st.error(
+            "**No target column selected!** Supervised learning requires a target variable. "
+            "Please go back to the **Data** tab, select a target column, and click 'Create Dataset'."
+        )
+        return None
+
+    # Early validation - don't allow training with 0 features
+    if actual_X.shape[1] == 0:
+        st.error(
+            f"Dataset has 0 feature columns! Card metadata says {card.n_features} features "
+            f"but actual data has {actual_X.shape[1]}. Please re-upload your CSV and click 'Create Dataset'."
+        )
+        return None
+
     level = get_level()
     task_type = data_result.card.task_type
 
@@ -317,12 +461,54 @@ def model_section(data_result, preproc_config):
 
 def train_model(data_result, preproc_config, estimator_info, params, split_config):
     """Train the model with given configuration."""
-    X = data_result.X
-    y = data_result.y
+    X = data_result.X.copy()
+    y = data_result.y.copy() if data_result.y is not None else None
     task_type = data_result.card.task_type
+
+    # Supervised learning requires a target column
+    if y is None:
+        raise ValueError(
+            "No target column selected. Supervised learning requires a target variable. "
+            "Please go back to the Data tab and select a target column, then click 'Create Dataset'."
+        )
+
+    # Validate that actual data matches the card metadata
+    card = data_result.card
+    if X.shape[0] != card.n_samples or X.shape[1] != card.n_features:
+        raise ValueError(
+            f"Data mismatch detected! This usually means stale cached data. "
+            f"Card says: {card.n_samples} samples, {card.n_features} features. "
+            f"Actual X: {X.shape[0]} samples, {X.shape[1]} features. "
+            f"Please refresh the page (Ctrl+Shift+R) and re-upload your CSV."
+        )
+
+    # Validate input data immediately
+    if len(X.columns) == 0:
+        raise ValueError(
+            f"Dataset has no feature columns! "
+            f"Dataset name: {data_result.card.name}, "
+            f"X shape: {X.shape}, "
+            f"Original columns from card: {[f.name for f in data_result.card.features]}"
+        )
+
+    # Ensure column names are strings to avoid type mismatches in sklearn
+    X.columns = [str(c) for c in X.columns]
+
+    # Drop rows where target is NaN
+    if y is not None:
+        if hasattr(y, "isna"):
+            valid_mask = ~y.isna()
+        else:
+            valid_mask = ~pd.isna(y)
+        X = X[valid_mask].reset_index(drop=True)
+        y = y[valid_mask].reset_index(drop=True)
 
     # Encode target if needed
     y_encoded, label_encoder = encode_target(y, task_type)
+
+    # DEBUG: Log before split
+    st.write(f"[DEBUG train_model] Before split - X.shape: {X.shape}, columns: {list(X.columns)}")
+    st.write(f"[DEBUG train_model] X.dtypes: {dict(X.dtypes)}")
 
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
@@ -331,6 +517,9 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
         test_size=split_config["test_size"],
         random_state=split_config["random_state"],
     )
+
+    # DEBUG: Log after split
+    st.write(f"[DEBUG train_model] After split - X_train.shape: {X_train.shape}")
 
     # Build preprocessing pipeline
     preproc_builder = PreprocessingBuilder(
@@ -345,11 +534,21 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
         task_type=task_type,
     )
 
+    # Let the pipeline auto-detect column types from X_train
+    # Don't use pre-computed column lists as they may not match after filtering
     preprocessing_pipeline, numeric_cols, categorical_cols = preproc_builder.build_full_pipeline(
         X_train,
-        force_categorical=preproc_config.get("categorical_cols"),
-        force_numeric=preproc_config.get("numeric_cols"),
     )
+
+    # DEBUG: Log pipeline configuration and test preprocessing output
+    st.write(f"[DEBUG train_model] Pipeline built - numeric_cols: {numeric_cols}, categorical_cols: {categorical_cols}")
+    try:
+        test_transform = preprocessing_pipeline.fit_transform(X_train.head(5))
+        st.write(f"[DEBUG train_model] Preprocessing test output shape: {test_transform.shape}")
+        if test_transform.shape[1] == 0:
+            st.error("[DEBUG train_model] CRITICAL: Preprocessing produces 0 features!")
+    except Exception as e:
+        st.error(f"[DEBUG train_model] Preprocessing test failed: {e}")
 
     # Create estimator
     estimator = create_estimator(task_type, estimator_info.name, **params)
@@ -361,6 +560,32 @@ def train_model(data_result, preproc_config, estimator_info, params, split_confi
             ("estimator", estimator),
         ]
     )
+
+    # Validate before fitting
+    if len(X_train.columns) == 0:
+        raise ValueError(
+            f"No feature columns found in training data. "
+            f"Dataset: {data_result.card.name}, "
+            f"Original X shape: {data_result.X.shape}, "
+            f"X_train shape: {X_train.shape}, "
+            f"numeric_cols: {numeric_cols}, categorical_cols: {categorical_cols}. "
+            f"Please ensure your dataset has at least one feature column."
+        )
+
+    # Also validate that columns match what ColumnTransformer expects
+    all_expected_cols = set(numeric_cols + categorical_cols)
+    actual_cols = set(X_train.columns)
+    if all_expected_cols and not all_expected_cols.issubset(actual_cols):
+        missing = all_expected_cols - actual_cols
+        raise ValueError(
+            f"Column mismatch! Expected columns {missing} not found in X_train. "
+            f"X_train columns: {list(X_train.columns)}, "
+            f"numeric_cols: {numeric_cols}, categorical_cols: {categorical_cols}"
+        )
+
+    # DEBUG: Final check before fit
+    st.write(f"[DEBUG train_model] About to fit - X_train.shape: {X_train.shape}")
+    st.write(f"[DEBUG train_model] X_train.columns: {list(X_train.columns)}")
 
     # Fit
     full_pipeline.fit(X_train, y_train)

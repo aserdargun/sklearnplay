@@ -11,6 +11,61 @@ import pandas as pd
 from skplay.core.datasets import DatasetCard, DatasetResult, Domain, FeatureInfo, TaskType
 
 
+def detect_datetime_column(df: pd.DataFrame) -> str | None:
+    """Detect a datetime column in the DataFrame.
+
+    Looks for columns that are already datetime type or can be parsed as datetime.
+    Common datetime column names are prioritized.
+
+    Args:
+        df: Input DataFrame
+
+    Returns:
+        Column name if a datetime column is found, None otherwise
+    """
+    # Common datetime column names (case-insensitive)
+    datetime_names = {
+        "timestamp", "datetime", "date", "time", "created_at", "updated_at",
+        "created", "updated", "ts", "dt", "event_time", "event_date",
+        "start_time", "end_time", "start_date", "end_date",
+    }
+
+    # First, check for columns already parsed as datetime
+    for col in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            return col
+
+    # Then, look for columns with datetime-like names that can be parsed
+    for col in df.columns:
+        col_lower = str(col).lower().strip()
+        if col_lower in datetime_names:
+            try:
+                pd.to_datetime(df[col], errors="raise")
+                return col
+            except (ValueError, TypeError):
+                continue
+
+    # Finally, try to detect any column that looks like datetime
+    for col in df.columns:
+        # Skip numeric columns (could be Unix timestamps, handle separately)
+        if pd.api.types.is_numeric_dtype(df[col]):
+            continue
+        # Skip columns with too many unique values relative to string length
+        if df[col].dtype == object:
+            try:
+                # Sample a few values to check if they parse as datetime
+                sample = df[col].dropna().head(10)
+                if len(sample) > 0:
+                    parsed = pd.to_datetime(sample, errors="coerce")
+                    # If most values parse successfully, it's likely a datetime column
+                    if parsed.notna().mean() > 0.8:
+                        return col
+            except (ValueError, TypeError):
+                continue
+
+    return None
+
+
 def detect_dtype(series: pd.Series) -> Literal["numeric", "categorical", "binary"]:
     """Detect the dtype of a pandas Series."""
     if pd.api.types.is_numeric_dtype(series):
@@ -55,6 +110,7 @@ def parse_csv(
 def create_dataset_from_upload(
     df: pd.DataFrame,
     target_column: str | None = None,
+    datetime_column: str | None = None,
     task_type: TaskType | None = None,
     dataset_name: str = "uploaded",
     description: str = "User-uploaded dataset",
@@ -65,6 +121,7 @@ def create_dataset_from_upload(
     Args:
         df: The uploaded DataFrame
         target_column: Name of the target column (None for unsupervised)
+        datetime_column: Name of column to use as datetime index (None to skip)
         task_type: Override for task type detection
         dataset_name: Name for the dataset
         description: Description for the dataset
@@ -75,6 +132,22 @@ def create_dataset_from_upload(
     """
     dtype_overrides = dtype_overrides or {}
 
+    # Handle datetime column - parse, sort, then convert to numeric for ML compatibility
+    if datetime_column and datetime_column in df.columns:
+        df = df.copy()
+        df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
+        # Sort by datetime
+        df = df.sort_values(datetime_column).reset_index(drop=True)
+        # DEBUG: Log datetime parsing results
+        nat_count = df[datetime_column].isna().sum()
+        print(f"[DEBUG upload.py] Datetime '{datetime_column}': {len(df) - nat_count}/{len(df)} parsed successfully")
+        if nat_count == len(df):
+            print(f"[DEBUG upload.py] WARNING: All values in '{datetime_column}' failed to parse!")
+        # Convert datetime to Unix timestamp (seconds) for ML compatibility
+        # sklearn transformers can't handle datetime64 directly
+        df[datetime_column] = df[datetime_column].astype("int64") // 10**9  # nanoseconds to seconds
+        print(f"[DEBUG upload.py] Converted '{datetime_column}' to Unix timestamp (numeric)")
+
     # Split features and target
     if target_column and target_column in df.columns:
         X = df.drop(columns=[target_column])
@@ -83,6 +156,17 @@ def create_dataset_from_upload(
         X = df.copy()
         y = None
         target_column = None
+
+    # Validate that we have at least one feature column
+    if len(X.columns) == 0:
+        raise ValueError(
+            "Dataset has no feature columns. Please ensure your CSV has at least one "
+            "column besides the target column."
+        )
+
+    # DEBUG: Log X shape after creation
+    print(f"[DEBUG upload.py] After split - X.shape: {X.shape}, columns: {list(X.columns)}")
+    print(f"[DEBUG upload.py] Column dtypes: {dict(X.dtypes)}")
 
     # Detect feature types
     features = []
