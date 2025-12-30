@@ -8,7 +8,7 @@ This page covers:
 
 import streamlit as st
 
-st.set_page_config(page_title="Metadata Routing", page_icon="🔀", layout="wide")
+st.set_page_config(page_title="Metadata Routing", page_icon="images/icon.png", layout="wide")
 
 from skplay.ui.level import level_selector
 

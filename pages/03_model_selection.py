@@ -15,7 +15,7 @@ from sklearn.model_selection import (
     train_test_split,
 )
 
-st.set_page_config(page_title="Model Selection", page_icon="🎚️", layout="wide")
+st.set_page_config(page_title="Model Selection", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import get_dataset
 from skplay.core.estimators import create_estimator
@@ -528,7 +528,7 @@ def metrics_section():
             },
         ]
 
-        st.dataframe(pd.DataFrame(metrics_data), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(metrics_data), hide_index=True, width="stretch")
 
         with st.expander("Confusion Matrix Explained"):
             st.markdown("""
@@ -573,7 +573,7 @@ def metrics_section():
             },
         ]
 
-        st.dataframe(pd.DataFrame(metrics_data), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(metrics_data), hide_index=True, width="stretch")
 
         with st.expander("When to Use Each"):
             st.markdown("""

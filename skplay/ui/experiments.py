@@ -70,7 +70,7 @@ def show_experiment_history(
     # Display table
     st.dataframe(
         df.drop(columns=["_id"]),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -160,7 +160,7 @@ def _show_metrics_comparison_chart(experiments: list[ExperimentRun]) -> None:
     import plotly.express as px
 
     # Collect all metrics
-    all_metrics = set()
+    all_metrics: set[str] = set()
     for exp in experiments:
         all_metrics.update(exp.metrics.keys())
 
@@ -192,7 +192,7 @@ def _show_metrics_comparison_chart(experiments: list[ExperimentRun]) -> None:
         title="Metrics Comparison",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def show_quick_experiment_card(experiment: ExperimentRun) -> None:

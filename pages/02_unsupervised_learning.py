@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Unsupervised Learning", page_icon="🔍", layout="wide")
+st.set_page_config(page_title="Unsupervised Learning", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import DatasetRegistry, get_dataset
 from skplay.core.estimators import create_estimator
@@ -146,6 +146,51 @@ def data_section(task_type):
 
     else:
         # CSV Upload
+        st.markdown("#### CSV Template")
+        st.info(
+            "Your CSV should have **feature columns**. Target column is optional "
+            "(useful for evaluating clustering or outlier detection results)."
+        )
+
+        # Show template example
+        with st.expander("📋 View CSV Template Example"):
+            if task_type == "clustering":
+                template_data = {
+                    "feature_1": [1.2, 3.4, 5.6, 7.8, 2.1],
+                    "feature_2": [0.5, 1.5, 2.5, 3.5, 0.8],
+                    "feature_3": [100, 200, 150, 250, 120],
+                }
+                st.markdown("**Clustering example** (features only, no target needed):")
+            else:
+                template_data = {
+                    "feature_1": [1.2, 3.4, 5.6, 7.8, 100.0],
+                    "feature_2": [0.5, 1.5, 2.5, 3.5, 50.0],
+                    "feature_3": [100, 200, 150, 250, 999],
+                    "is_outlier": ["normal", "normal", "normal", "normal", "outlier"],
+                }
+                st.markdown(
+                    "**Outlier detection example** (optional label column for evaluation):"
+                )
+
+            template_df = pd.DataFrame(template_data)
+            st.dataframe(template_df, hide_index=True)
+
+            # Download template button
+            csv_template = template_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Template CSV",
+                data=csv_template,
+                file_name=f"template_{task_type}.csv",
+                mime="text/csv",
+            )
+
+            st.markdown("""
+            **Tips:**
+            - First row should be column headers
+            - Numeric features work best for clustering/outlier detection
+            - Target column is optional (for evaluation only)
+            """)
+
         uploaded_file = st.file_uploader(
             "Upload CSV",
             type=["csv"],
@@ -156,7 +201,7 @@ def data_section(task_type):
             from skplay.core.upload import create_dataset_from_upload
 
             df = pd.read_csv(uploaded_file)
-            st.dataframe(df.head(), use_container_width=True)
+            st.dataframe(df.head(), width="stretch")
 
             # Optional target for evaluation
             target_col = st.selectbox(

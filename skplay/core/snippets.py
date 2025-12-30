@@ -157,7 +157,9 @@ def generate_column_transformer_code(
     transformer_defs = []
     transformer_tuples = []
 
-    for name, transformer, columns in ct.transformers_:
+    # Use transformers (unfitted) or transformers_ (fitted)
+    transformers_list = ct.transformers_ if hasattr(ct, "transformers_") else ct.transformers
+    for name, transformer, columns in transformers_list:
         if transformer == "drop":
             transformer_tuples.append(f"    ('{name}', 'drop', {format_value(columns)}),")
         elif transformer == "passthrough":

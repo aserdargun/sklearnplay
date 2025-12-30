@@ -8,7 +8,7 @@ import numpy as np
 import streamlit as st
 from sklearn.model_selection import train_test_split
 
-st.set_page_config(page_title="Visualizations", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Visualizations", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import get_dataset
 from skplay.ui.level import level_selector

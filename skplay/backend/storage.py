@@ -148,7 +148,7 @@ class AzureBlobStorage:
     ) -> list[dict[str, Any]]:
         """List blobs in a container."""
         container_client = self._get_container_client(container)
-        blobs = []
+        blobs: list[dict[str, Any]] = []
 
         for blob in container_client.list_blobs(name_starts_with=prefix):
             if len(blobs) >= limit:
@@ -259,7 +259,7 @@ class LocalStorage:
     ) -> list[dict[str, Any]]:
         """List files in local storage."""
         container_path = self._get_container_path(container)
-        blobs = []
+        blobs: list[dict[str, Any]] = []
 
         for file_path in container_path.iterdir():
             if prefix and not file_path.name.startswith(prefix):

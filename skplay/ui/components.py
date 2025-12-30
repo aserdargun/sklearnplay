@@ -13,16 +13,26 @@ from skplay.ui.level import Level, get_level, get_level_config, should_show_para
 
 
 def show_dataset_card(card: DatasetCard) -> None:
-    """Display a dataset card with metadata.
+    """Display a dataset card with glassmorphism styling.
 
     Args:
         card: The dataset card to display
     """
-    st.markdown(f"### {card.name.replace('_', ' ').title()}")
+    # Header with icon badge
+    st.markdown(
+        f"""
+        <div class="glass-card">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div class="icon-badge">📊</div>
+                <h3 style="margin: 0; margin-left: 0.75rem;">{card.name.replace('_', ' ').title()}</h3>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">{card.description}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Description and basic info
-    st.markdown(card.description)
-
+    # Metrics row
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Samples", card.n_samples)
@@ -50,7 +60,7 @@ def show_dataset_card(card: DatasetCard) -> None:
                     else f.description,
                 }
             )
-        st.dataframe(pd.DataFrame(feature_data), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(feature_data), width="stretch", hide_index=True)
 
 
 def show_data_preview(
@@ -73,11 +83,11 @@ def show_data_preview(
     else:
         display_df = X
 
-    st.dataframe(display_df.head(n_rows), use_container_width=True)
+    st.dataframe(display_df.head(n_rows), width="stretch")
 
     # Summary stats
     with st.expander("Summary Statistics"):
-        st.dataframe(X.describe(), use_container_width=True)
+        st.dataframe(X.describe(), width="stretch")
 
 
 def show_metrics_table(
@@ -85,14 +95,22 @@ def show_metrics_table(
     title: str = "Metrics",
     highlight_best: bool = False,
 ) -> None:
-    """Display metrics in a formatted table.
+    """Display metrics in a formatted table with glassmorphism styling.
 
     Args:
         metrics: Dictionary of metric name -> value
         title: Table title
         highlight_best: Whether to highlight best metric
     """
-    st.markdown(f"#### {title}")
+    st.markdown(
+        f"""
+        <div class="section-header">
+            <div class="icon-badge-sm" style="margin-right: 0.75rem;">📈</div>
+            <h4 style="margin: 0;">{title}</h4>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Format metrics for display
     formatted = {}
@@ -105,7 +123,7 @@ def show_metrics_table(
         else:
             formatted[name] = str(value)
 
-    # Display as columns
+    # Display as columns - metrics get glassmorphism from CSS
     cols = st.columns(len(formatted))
     for col, (metric_name, metric_value) in zip(cols, formatted.items(), strict=True):
         col.metric(metric_name.upper().replace("_", " "), metric_value)
@@ -208,15 +226,24 @@ def render_param_widget(
         return st.checkbox(param_name, value=default_value, key=key, help=help_text)
 
     elif isinstance(default_value, int):
-        # Determine reasonable range
-        if "n_estimators" in param_name:
+        # Handle parameters that can be -1 (meaning "auto" or "no limit")
+        # e.g., n_jobs=-1 (all cores), max_iter=-1 (no limit), verbose=-1
+        if default_value < 0:
+            return st.number_input(
+                param_name, -1, 10000, default_value, key=key, help=help_text
+            )
+        # Determine reasonable range for positive values
+        elif "n_estimators" in param_name:
             return st.slider(param_name, 10, 1000, default_value, step=10, key=key, help=help_text)
         elif "max_depth" in param_name:
             return st.slider(param_name, 1, 50, default_value or 10, key=key, help=help_text)
         elif "n_neighbors" in param_name or "n_clusters" in param_name:
             return st.slider(param_name, 1, 50, default_value, key=key, help=help_text)
         elif "max_iter" in param_name:
-            return st.number_input(param_name, 1, 10000, default_value, key=key, help=help_text)
+            return st.number_input(param_name, -1, 10000, default_value, key=key, help=help_text)
+        elif param_name == "n_jobs":
+            # n_jobs: -1 means all cores, None means 1
+            return st.number_input(param_name, -1, 32, default_value, key=key, help=help_text)
         elif "n_" in param_name or "min_" in param_name:
             return st.number_input(param_name, 1, 1000, default_value, key=key, help=help_text)
         else:
@@ -284,6 +311,29 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str | None] 
     Returns:
         List of options or None
     """
+    # Handle estimator-specific options
+    estimator_lower = estimator_name.lower()
+
+    # Criterion depends on estimator type
+    if param_name == "criterion":
+        if "gradientboosting" in estimator_lower or "histgradientboosting" in estimator_lower:
+            return ["friedman_mse", "squared_error"]
+        elif "regressor" in estimator_lower or "regression" in estimator_lower:
+            return ["squared_error", "friedman_mse", "absolute_error", "poisson"]
+        else:  # Classifiers (DecisionTree, RandomForest, etc.)
+            return ["gini", "entropy", "log_loss"]
+
+    # Loss depends on estimator type
+    if param_name == "loss":
+        if "sgdclassifier" in estimator_lower:
+            return ["hinge", "log_loss", "modified_huber", "squared_hinge", "perceptron"]
+        elif "sgdregressor" in estimator_lower:
+            return ["squared_error", "huber", "epsilon_insensitive"]
+        elif "gradientboostingclassifier" in estimator_lower:
+            return ["log_loss", "exponential"]
+        elif "gradientboostingregressor" in estimator_lower:
+            return ["squared_error", "absolute_error", "huber", "quantile"]
+
     options_map: dict[str, list[str | None]] = {
         "kernel": ["linear", "poly", "rbf", "sigmoid"],
         "solver": [
@@ -299,15 +349,6 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str | None] 
             "newton-cg",
         ],
         "penalty": [None, "l1", "l2", "elasticnet"],
-        "criterion": [
-            "gini",
-            "entropy",
-            "log_loss",
-            "squared_error",
-            "friedman_mse",
-            "absolute_error",
-            "poisson",
-        ],
         "max_features": [None, "sqrt", "log2"],
         "init": ["k-means++", "random"],
         "linkage": ["ward", "complete", "average", "single"],
@@ -315,15 +356,6 @@ def get_param_options(param_name: str, estimator_name: str) -> list[str | None] 
         "weights": ["uniform", "distance"],
         "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
         "activation": ["identity", "logistic", "tanh", "relu"],
-        "loss": [
-            "hinge",
-            "log_loss",
-            "modified_huber",
-            "squared_hinge",
-            "perceptron",
-            "squared_error",
-            "huber",
-        ],
         "learning_rate": ["constant", "optimal", "invscaling", "adaptive"],
         "covariance_type": ["full", "tied", "diag", "spherical"],
         "multi_class": ["auto", "ovr", "multinomial"],
@@ -369,13 +401,21 @@ def get_param_help(param_name: str) -> str:
 
 
 def show_code_snippet(code: str, language: str = "python") -> None:
-    """Display a code snippet with copy button.
+    """Display a code snippet with glassmorphism styling.
 
     Args:
         code: The code to display
         language: Programming language
     """
-    st.markdown("#### Reproducible Code")
+    st.markdown(
+        """
+        <div class="section-header">
+            <div class="icon-badge-sm" style="margin-right: 0.75rem;">💻</div>
+            <h4 style="margin: 0;">Reproducible Code</h4>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.code(code, language=language)
 
 
@@ -383,16 +423,24 @@ def create_download_button(
     model: Any,
     filename: str = "model.joblib",
 ) -> None:
-    """Create download button for a trained model.
+    """Create download button for a trained model with glassmorphism styling.
 
     Args:
         model: The trained model/pipeline
         filename: Download filename
     """
-    st.markdown("#### Export Model")
+    st.markdown(
+        """
+        <div class="section-header">
+            <div class="icon-badge-sm" style="margin-right: 0.75rem;">💾</div>
+            <h4 style="margin: 0;">Export Model</h4>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.warning(
-        "⚠️ **Security Warning:** Only load models from trusted sources. "
+        "**Security Warning:** Only load models from trusted sources. "
         "Malicious models can execute arbitrary code."
     )
 
@@ -651,7 +699,7 @@ def show_preprocessing_controls(
 
 
 def show_training_button(key: str = "train_btn") -> bool:
-    """Show training button.
+    """Show training button with modern styling.
 
     Args:
         key: Widget key

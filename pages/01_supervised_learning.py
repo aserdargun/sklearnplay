@@ -16,7 +16,7 @@ import streamlit as st
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
-st.set_page_config(page_title="Supervised Learning", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Supervised Learning", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import DatasetRegistry, get_dataset
 from skplay.core.estimators import create_estimator
@@ -164,6 +164,51 @@ def data_section():
 
     else:
         # CSV Upload
+        st.markdown("#### CSV Template")
+        st.info(
+            "Your CSV should have **feature columns** and optionally a **target column** "
+            "for the variable you want to predict."
+        )
+
+        # Show template example
+        with st.expander("📋 View CSV Template Example"):
+            if task_type == "classification":
+                template_data = {
+                    "feature_1": [1.2, 3.4, 5.6, 7.8],
+                    "feature_2": [0.5, 1.5, 2.5, 3.5],
+                    "category": ["A", "B", "A", "B"],
+                    "target": ["class_1", "class_2", "class_1", "class_2"],
+                }
+                st.markdown("**Classification example** (target column contains categories):")
+            else:
+                template_data = {
+                    "feature_1": [1.2, 3.4, 5.6, 7.8],
+                    "feature_2": [0.5, 1.5, 2.5, 3.5],
+                    "category": ["A", "B", "A", "B"],
+                    "target": [10.5, 20.3, 15.7, 25.1],
+                }
+                st.markdown("**Regression example** (target column contains numbers):")
+
+            template_df = pd.DataFrame(template_data)
+            st.dataframe(template_df, hide_index=True)
+
+            # Download template button
+            csv_template = template_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Template CSV",
+                data=csv_template,
+                file_name=f"template_{task_type}.csv",
+                mime="text/csv",
+            )
+
+            st.markdown("""
+            **Tips:**
+            - First row should be column headers
+            - Numeric features: integers or decimals
+            - Categorical features: text values
+            - Target column: select after upload
+            """)
+
         uploaded_file = st.file_uploader(
             "Upload CSV",
             type=["csv"],
@@ -174,7 +219,7 @@ def data_section():
             from skplay.core.upload import create_dataset_from_upload
 
             df = pd.read_csv(uploaded_file)
-            st.dataframe(df.head(), use_container_width=True)
+            st.dataframe(df.head(), width="stretch")
 
             # Target column selection
             target_col = st.selectbox(
@@ -421,6 +466,11 @@ def results_section(model_result, data_result):
                         st.pyplot(fig)
                     except Exception as e:
                         st.warning(f"Could not plot learning curve: {e}")
+            else:
+                st.info(
+                    "🔒 Learning curves are available at **Intermediate** or **Advanced** level. "
+                    "Change your experience level in the sidebar to enable this feature."
+                )
 
     elif task_type == "regression":
         viz_tabs = st.tabs(["Residuals", "Actual vs Predicted", "Learning Curve"])
@@ -446,6 +496,11 @@ def results_section(model_result, data_result):
                         st.pyplot(fig)
                     except Exception as e:
                         st.warning(f"Could not plot learning curve: {e}")
+            else:
+                st.info(
+                    "🔒 Learning curves are available at **Intermediate** or **Advanced** level. "
+                    "Change your experience level in the sidebar to enable this feature."
+                )
 
     st.markdown("---")
 

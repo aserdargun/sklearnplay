@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_run:
+    workflows: ["Claude Code"]
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       environment:
@@ -26,6 +32,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -83,6 +90,8 @@ jobs:
             --tags environment=${{ env.ENVIRONMENT }} application=sklearn-playground
 
       - name: Purge Soft-Deleted Key Vaults
+        env:
+          BASE_NAME: ${{ env.BASE_NAME }}
         run: |
           # Key Vault names are globally unique and soft-delete keeps the name reserved
           # Purge any soft-deleted vaults matching our naming pattern (kv-skplay-{env}-*)

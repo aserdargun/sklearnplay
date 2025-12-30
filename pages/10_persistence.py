@@ -5,7 +5,7 @@ This page covers saving and loading trained models.
 
 import streamlit as st
 
-st.set_page_config(page_title="Model Persistence", page_icon="💾", layout="wide")
+st.set_page_config(page_title="Model Persistence", page_icon="images/icon.png", layout="wide")
 
 from skplay.ui.level import get_level, level_selector
 

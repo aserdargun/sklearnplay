@@ -44,8 +44,8 @@ htmlcov/
 # Ruff
 .ruff_cache/
 
-# Streamlit
-.streamlit/
+# Streamlit (keep config.toml, ignore secrets)
+.streamlit/secrets.toml
 
 # OS
 .DS_Store

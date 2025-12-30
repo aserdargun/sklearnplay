@@ -5,7 +5,7 @@ Links to external learning materials and documentation.
 
 import streamlit as st
 
-st.set_page_config(page_title="External Resources", page_icon="📚", layout="wide")
+st.set_page_config(page_title="External Resources", page_icon="images/icon.png", layout="wide")
 
 from skplay.ui.level import level_selector
 

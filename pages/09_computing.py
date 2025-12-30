@@ -6,7 +6,7 @@ This page covers performance, parallelism, and computational aspects.
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Computing", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Computing", page_icon="images/icon.png", layout="wide")
 
 from skplay.ui.level import get_level, level_selector
 
@@ -78,7 +78,7 @@ scores = cross_val_score(model, X, y, cv=5, n_jobs=-1)
         {"Value": "n", "Meaning": "Use exactly n cores"},
     ]
 
-    st.dataframe(pd.DataFrame(njobs_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(njobs_data), hide_index=True, width="stretch")
 
     st.subheader("Backend Configuration")
 
@@ -161,7 +161,7 @@ for X_batch, y_batch in data_generator:
         {"Category": "Decomposition", "Estimators": "IncrementalPCA, MiniBatchDictionaryLearning"},
     ]
 
-    st.dataframe(pd.DataFrame(estimators_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(estimators_data), hide_index=True, width="stretch")
 
 
 def performance_section():
@@ -200,7 +200,7 @@ def performance_section():
         {"Algorithm": "K-Means", "Training": "O(n × k × d × i)", "Prediction": "O(k × d)"},
     ]
 
-    st.dataframe(pd.DataFrame(complexity_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(complexity_data), hide_index=True, width="stretch")
     st.caption("n=samples, d=features, k=clusters/trees, i=iterations, n_sv=support vectors")
 
 

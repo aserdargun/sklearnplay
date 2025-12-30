@@ -46,19 +46,25 @@ def set_level(level: Level) -> None:
     st.session_state.user_level = level
 
 
-def level_selector(key: str = "level_selector") -> Level:
-    """Render level selector widget.
+def level_selector(key: str = "level_selector", with_container: bool = True) -> Level:
+    """Render level selector widget with glassmorphism styling.
 
     Args:
         key: Unique key for the widget
+        with_container: Whether to wrap in a glass container
 
     Returns:
         Selected level
     """
-    current = get_level()
+    from skplay.ui.styles import glass_divider
 
+    current = get_level()
     options = list(LEVEL_ORDER.keys())
     index = options.index(current)
+
+    if with_container:
+        st.markdown('<div class="level-container">', unsafe_allow_html=True)
+        st.markdown('<h4>Experience Level</h4>', unsafe_allow_html=True)
 
     selected = st.radio(
         "Experience Level",
@@ -68,22 +74,31 @@ def level_selector(key: str = "level_selector") -> Level:
         help="Choose your experience level to adjust the interface complexity",
         key=key,
         horizontal=True,
+        label_visibility="collapsed" if with_container else "visible",
     )
 
     if selected != current:
         set_level(cast(Level, selected))
 
+    if with_container:
+        st.caption(LEVEL_DESCRIPTIONS[cast(Level, selected)])
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(glass_divider(), unsafe_allow_html=True)
+
     return cast(Level, selected)
 
 
 def level_selector_sidebar() -> Level:
-    """Render level selector in sidebar.
+    """Render level selector in sidebar with glassmorphism styling.
 
     Returns:
         Selected level
     """
+    from skplay.ui.styles import glass_divider
+
     with st.sidebar:
-        st.subheader("Experience Level")
+        st.markdown('<div class="level-container">', unsafe_allow_html=True)
+        st.markdown('<h4>Experience Level</h4>', unsafe_allow_html=True)
 
         current = get_level()
         options = list(LEVEL_ORDER.keys())
@@ -100,6 +115,8 @@ def level_selector_sidebar() -> Level:
 
         # Show current level description
         st.caption(LEVEL_DESCRIPTIONS[current])
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(glass_divider(), unsafe_allow_html=True)
 
     return get_level()
 

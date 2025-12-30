@@ -21,6 +21,15 @@ param postgresAdminPassword string
 @description('Container image tag to deploy')
 param imageTag string = 'latest'
 
+@description('Primary custom domain (apex)')
+param customDomainApex string = 'scikit-play.org'
+
+@description('Secondary custom domain (www)')
+param customDomainWww string = 'www.scikit-play.org'
+
+@description('Enable custom domains')
+param enableCustomDomains bool = true
+
 // Variables
 var resourceSuffix = '${baseName}-${environment}'
 var uniqueSuffix = uniqueString(resourceGroup().id)
@@ -189,6 +198,17 @@ resource secretStorageKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 }
 
 
+// Reference existing managed certificates (already provisioned)
+resource managedCertApex 'Microsoft.App/managedEnvironments/managedCertificates@2023-05-01' existing = if (enableCustomDomains) {
+  parent: containerAppsEnv
+  name: 'scikit-play.org-cae-skpl-251229194204'
+}
+
+resource managedCertWww 'Microsoft.App/managedEnvironments/managedCertificates@2023-05-01' existing = if (enableCustomDomains) {
+  parent: containerAppsEnv
+  name: 'www.scikit-play.org-cae-skpl-251229195059'
+}
+
 // Container App
 resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: 'ca-${resourceSuffix}'
@@ -207,6 +227,18 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
         targetPort: 8501
         transport: 'http'
         allowInsecure: false
+        customDomains: enableCustomDomains ? [
+          {
+            name: customDomainApex
+            bindingType: 'SniEnabled'
+            certificateId: managedCertApex.id
+          }
+          {
+            name: customDomainWww
+            bindingType: 'SniEnabled'
+            certificateId: managedCertWww.id
+          }
+        ] : []
       }
       registries: [
         {
@@ -319,3 +351,5 @@ output postgresServerName string = postgresServer.name
 output postgresServerFqdn string = postgresServer.properties.fullyQualifiedDomainName
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
+output customDomainApexUrl string = enableCustomDomains ? 'https://${customDomainApex}' : ''
+output customDomainWwwUrl string = enableCustomDomains ? 'https://${customDomainWww}' : ''

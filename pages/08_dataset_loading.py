@@ -6,7 +6,7 @@ This page covers sklearn's dataset loading functions.
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Dataset Loading", page_icon="📁", layout="wide")
+st.set_page_config(page_title="Dataset Loading", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import get_dataset
 from skplay.ui.level import level_selector
@@ -102,7 +102,7 @@ def toy_datasets_section():
         },
     ]
 
-    st.dataframe(pd.DataFrame(datasets), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(datasets), hide_index=True, width="stretch")
 
     st.code(
         """
@@ -140,7 +140,7 @@ y = iris.target  # pandas Series
         col2.metric("Features", data.card.n_features)
         col3.metric("Task", data.card.task_type)
 
-        st.dataframe(data.X.head(10), use_container_width=True)
+        st.dataframe(data.X.head(10), width="stretch")
 
 
 def real_world_section():
@@ -190,7 +190,7 @@ def real_world_section():
         },
     ]
 
-    st.dataframe(pd.DataFrame(datasets), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(datasets), hide_index=True, width="stretch")
 
     st.code(
         """

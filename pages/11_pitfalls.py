@@ -6,7 +6,7 @@ This page covers mistakes to avoid and best practices.
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Pitfalls & Best Practices", page_icon="⚠️", layout="wide")
+st.set_page_config(page_title="Pitfalls & Best Practices", page_icon="images/icon.png", layout="wide")
 
 from skplay.ui.level import level_selector
 
@@ -130,7 +130,7 @@ score = pipeline.score(X_test, y_test)
         },
     ]
 
-    st.dataframe(pd.DataFrame(leakage_sources), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(leakage_sources), hide_index=True, width="stretch")
 
 
 def preprocessing_section():

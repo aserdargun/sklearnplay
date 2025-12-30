@@ -6,7 +6,7 @@ Search and explore the scikit-learn API through introspection.
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="API Explorer", page_icon="🔎", layout="wide")
+st.set_page_config(page_title="API Explorer", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.api_explorer import (
     generate_example_snippet,
@@ -194,7 +194,7 @@ def display_entry_details(entry):
                 }
             )
 
-        st.dataframe(pd.DataFrame(param_data), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(param_data), hide_index=True, width="stretch")
 
     # Example
     st.markdown("### Quick Example")

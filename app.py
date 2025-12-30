@@ -9,10 +9,22 @@ import streamlit as st
 # Page configuration - must be first Streamlit command
 st.set_page_config(
     page_title="scikit-learn Playground",
-    page_icon="🧪",
+    page_icon="images/icon.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Inject glassmorphism styles immediately after page config
+from skplay.ui.styles import (  # noqa: E402
+    dataset_row,
+    feature_card,
+    glass_divider,
+    hero_section,
+    inject_styles,
+    nav_card,
+)
+
+inject_styles()
 
 
 def init_session_state():
@@ -34,14 +46,12 @@ def main():
     """Main application entry point."""
     init_session_state()
 
-    # Sidebar
+    # Sidebar with modern styling
     with st.sidebar:
-        st.image("https://scikit-learn.org/stable/_static/scikit-learn-logo-small.png", width=200)
-        st.title("sklearn Playground")
-        st.markdown("---")
+        # Experience Level selector FIRST - so user adjusts it first
+        st.markdown('<div class="level-container">', unsafe_allow_html=True)
+        st.markdown('<h4>Experience Level</h4>', unsafe_allow_html=True)
 
-        # Level selector
-        st.subheader("Experience Level")
         level_options = {
             "beginner": "🌱 Beginner",
             "intermediate": "🌿 Intermediate",
@@ -67,74 +77,93 @@ def main():
             "advanced": "Full control over all parameters",
         }
         st.caption(level_descriptions[selected_level])
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("---")
+        st.markdown(glass_divider(), unsafe_allow_html=True)
 
-        # Quick links
-        st.subheader("Resources")
-        st.markdown("""
-        - [sklearn User Guide](https://scikit-learn.org/stable/user_guide.html)
-        - [sklearn API Reference](https://scikit-learn.org/stable/api/index.html)
-        - [sklearn Examples](https://scikit-learn.org/stable/auto_examples/index.html)
-        """)
+        # Logo with styled container
+        st.image("images/logo.png", width="stretch")
+        st.markdown(glass_divider(), unsafe_allow_html=True)
 
-    # Main content
-    st.title("Welcome to scikit-learn Playground 🧪")
+        # Quick links with styled container
+        st.markdown('<div class="level-container">', unsafe_allow_html=True)
+        st.markdown('<h4>Resources</h4>', unsafe_allow_html=True)
+        st.markdown(
+            """
+        - [User Guide](https://scikit-learn.org/stable/user_guide.html)
+        - [API Reference](https://scikit-learn.org/stable/api/index.html)
+        - [Examples](https://scikit-learn.org/stable/auto_examples/index.html)
+        """
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("""
-    An interactive platform to learn and experiment with scikit-learn,
-    structured around the official User Guide.
+    # Main content - Hero section
+    st.markdown(
+        hero_section(
+            "scikit-learn Playground with Streamlit",
+            "Interactive machine learning education platform",
+            logo="logo.png",
+        ),
+        unsafe_allow_html=True,
+    )
 
-    ### Getting Started
+    # Features row
+    col1, col2, col3, col4 = st.columns(4)
+    features = [
+        ("📊", "Toy Datasets", "Pre-loaded domain datasets"),
+        ("📤", "CSV Upload", "Use your own data"),
+        ("🎛️", "Interactive", "Adjust and visualize"),
+        ("💾", "Export", "Download models & code"),
+    ]
 
-    Use the sidebar navigation to explore different topics:
-
-    1. **Supervised Learning** - Classification and regression algorithms
-    2. **Unsupervised Learning** - Clustering, dimensionality reduction
-    3. **Model Selection** - Cross-validation, hyperparameter tuning
-    4. **And more...** - Following the sklearn User Guide structure
-
-    ### Features
-
-    - 📊 **Toy Datasets** - Pre-loaded datasets by domain (power, retail, finance, healthcare)
-    - 📤 **CSV Upload** - Use your own data
-    - 🎛️ **Interactive Controls** - Adjust parameters and see results
-    - 📈 **Visualizations** - Learning curves, metrics, feature importance
-    - 💾 **Export** - Download trained models and code snippets
-    """)
+    for col, (icon, title, desc) in zip([col1, col2, col3, col4], features, strict=True):
+        with col:
+            st.markdown(feature_card(icon, title, desc), unsafe_allow_html=True)
 
     # Quick start section
-    st.markdown("---")
-    st.subheader("Quick Start")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-header"><h3>🚀 Quick Start</h3></div>',
+        unsafe_allow_html=True,
+    )
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown("#### 🎯 Classification")
-        st.markdown("Predict categories from features")
-        if st.button("Start Classification", key="quick_clf"):
+        st.markdown(
+            nav_card("🎯", "Classification", "Predict categories from features"),
+            unsafe_allow_html=True,
+        )
+        if st.button("Start Classification", key="quick_clf", width="stretch"):
             st.switch_page("pages/01_supervised_learning.py")
 
     with col2:
-        st.markdown("#### 📉 Regression")
-        st.markdown("Predict continuous values")
-        if st.button("Start Regression", key="quick_reg"):
+        st.markdown(
+            nav_card("📉", "Regression", "Predict continuous values"),
+            unsafe_allow_html=True,
+        )
+        if st.button("Start Regression", key="quick_reg", width="stretch"):
             st.switch_page("pages/01_supervised_learning.py")
 
     with col3:
-        st.markdown("#### 🔍 API Explorer")
-        st.markdown("Search sklearn classes and functions")
-        if st.button("Explore API", key="quick_api"):
+        st.markdown(
+            nav_card("🔍", "API Explorer", "Search sklearn classes & functions"),
+            unsafe_allow_html=True,
+        )
+        if st.button("Explore API", key="quick_api", width="stretch"):
             st.switch_page("pages/90_api_explorer.py")
 
     # Dataset overview
-    st.markdown("---")
-    st.subheader("Available Datasets")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-header"><h3>📊 Available Datasets</h3></div>',
+        unsafe_allow_html=True,
+    )
 
     from skplay.core.datasets import DatasetRegistry
 
     domains = ["general", "power", "retail", "finance", "healthcare"]
-    tabs = st.tabs([d.title() for d in domains])
+    tabs = st.tabs([f"  {d.title()}  " for d in domains])
 
     for tab, domain in zip(tabs, domains, strict=True):
         with tab:
@@ -142,16 +171,28 @@ def main():
             if datasets:
                 for name in datasets:
                     card = DatasetRegistry.get_card(name)
-                    with st.container():
-                        col1, col2, col3 = st.columns([3, 1, 1])
-                        with col1:
-                            st.markdown(f"**{name}** - {card.description[:60]}...")
-                        with col2:
-                            st.caption(f"📊 {card.n_samples} samples")
-                        with col3:
-                            st.caption(f"🎯 {card.task_type}")
+                    st.markdown(
+                        dataset_row(
+                            name=name.replace("_", " ").title(),
+                            description=card.description,
+                            samples=card.n_samples,
+                            task_type=card.task_type.replace("_", " ").title(),
+                        ),
+                        unsafe_allow_html=True,
+                    )
             else:
                 st.info(f"No datasets for {domain} domain")
+
+    # Footer
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.875rem;">
+            Built with Streamlit and scikit-learn
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-st.set_page_config(page_title="Model Inspection", page_icon="🔬", layout="wide")
+st.set_page_config(page_title="Model Inspection", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import get_dataset
 from skplay.ui.level import get_level, level_selector

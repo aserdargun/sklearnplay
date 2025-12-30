@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Dataset Transformations", page_icon="🔄", layout="wide")
+st.set_page_config(page_title="Dataset Transformations", page_icon="images/icon.png", layout="wide")
 
 from skplay.core.datasets import get_dataset
 from skplay.ui.level import get_level, level_selector
@@ -240,7 +240,7 @@ def preprocessing_section():
         },
     ]
 
-    st.dataframe(pd.DataFrame(scalers_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(scalers_data), hide_index=True, width="stretch")
 
     # Interactive demo
     st.subheader("Interactive Demo")
@@ -335,7 +335,7 @@ def imputation_section():
         },
     ]
 
-    st.dataframe(pd.DataFrame(imputers_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(imputers_data), hide_index=True, width="stretch")
 
     st.code(
         """
@@ -387,7 +387,7 @@ def encoding_section():
         },
     ]
 
-    st.dataframe(pd.DataFrame(encoders_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(encoders_data), hide_index=True, width="stretch")
 
     st.code(
         """

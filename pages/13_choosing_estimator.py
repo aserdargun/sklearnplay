@@ -6,7 +6,7 @@ This page helps users select appropriate algorithms for their problem.
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Choosing Estimator", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="Choosing Estimator", page_icon="images/icon.png", layout="wide")
 
 from skplay.ui.level import level_selector
 
@@ -125,7 +125,7 @@ def classification_guide():
         },
     ]
 
-    st.dataframe(pd.DataFrame(algorithms), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(algorithms), hide_index=True, width="stretch")
 
     st.markdown("""
     ### Quick Recommendations
@@ -187,7 +187,7 @@ def regression_guide():
         },
     ]
 
-    st.dataframe(pd.DataFrame(algorithms), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(algorithms), hide_index=True, width="stretch")
 
     st.markdown("""
     ### Quick Recommendations
@@ -242,7 +242,7 @@ def clustering_guide():
         },
     ]
 
-    st.dataframe(pd.DataFrame(algorithms), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(algorithms), hide_index=True, width="stretch")
 
     st.markdown("""
     ### Quick Recommendations
@@ -286,7 +286,7 @@ def outlier_guide():
         },
     ]
 
-    st.dataframe(pd.DataFrame(algorithms), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(algorithms), hide_index=True, width="stretch")
 
     st.markdown("""
     ### Quick Recommendations
@@ -335,7 +335,7 @@ def dim_reduction_guide():
         },
     ]
 
-    st.dataframe(pd.DataFrame(algorithms), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(algorithms), hide_index=True, width="stretch")
 
     st.markdown("""
     ### Quick Recommendations
